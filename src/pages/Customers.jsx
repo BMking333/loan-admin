@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import api from "../services/api";
 
+// ইউজার অ্যাপের URL (Netlify-র আসল URL দিন, শেষে / ছাড়া)
+const USER_APP_URL =
+  import.meta.env.VITE_USER_APP_URL || "https://loan.microfinancedevelopmentprojectbangladesh.com";
+
 const FILTERS = [
   { key: "", label: "সব" },
   { key: "today", label: "আজ" },
@@ -14,24 +18,27 @@ const Customers = () => {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("");
+  const [loginLoadingId, setLoginLoadingId] = useState(null);
+
+  const authHeader = () => ({
+    Authorization: `Bearer ${localStorage.getItem("access")}`,
+  });
 
   const fetchCustomers = async (type) => {
     try {
       setLoading(true);
       setError("");
 
-      const res = await api.get("/admin/users", {
+      const res = await api.get("/auth/admin/users", {
         params: type ? { filter_type: type } : {},
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("access")}`,
-        },
+        headers: authHeader(),
       });
 
       setCustomers(res.data?.users || []);
       setTodayCount(res.data?.today_registrations || 0);
     } catch (err) {
       console.error(err);
-      setError("ডাটা লোড করা যায়নি");
+      setError(err.response?.data?.detail || "ডাটা লোড করা যায়নি");
       setCustomers([]);
     } finally {
       setLoading(false);
@@ -41,6 +48,41 @@ const Customers = () => {
   useEffect(() => {
     fetchCustomers(filterType);
   }, [filterType]);
+
+  // ========= LOGIN AS USER =========
+  const loginAsUser = async (u) => {
+    if (!window.confirm(`"${u.name}" (${u.phone_number}) হিসেবে লগইন করবেন?`)) return;
+
+    try {
+      setLoginLoadingId(u.id);
+
+      const body = new URLSearchParams();
+      body.append("phone_number", u.phone_number);
+
+      const res = await api.post("/auth/admin/login-as-user", body, {
+        headers: {
+          ...authHeader(),
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      });
+
+      const { access_token, impersonation } = res.data;
+
+      // টোকেন URL fragment-এ পাঠানো হচ্ছে (সার্ভারে যায় না)
+      const params = new URLSearchParams({
+        impersonate_token: access_token,
+        by: impersonation?.by_name || "",
+        by_role: impersonation?.by_role || "",
+      });
+
+      window.open(`${USER_APP_URL}/#${params.toString()}`, "_blank");
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.detail || "ইউজার হিসেবে লগইন করা যায়নি");
+    } finally {
+      setLoginLoadingId(null);
+    }
+  };
 
   const q = search.trim().toLowerCase();
   const filtered = customers.filter(
@@ -107,6 +149,7 @@ const Customers = () => {
                 <th className="p-3 text-left">লোন (সংখ্যা / মোট)</th>
                 <th className="p-3 text-left">ব্যালেন্স</th>
                 <th className="p-3 text-left">রেজিস্ট্রেশন</th>
+                <th className="p-3 text-left">অ্যাকশন</th>
               </tr>
             </thead>
 
@@ -134,11 +177,20 @@ const Customers = () => {
                     </td>
                     <td className="p-3">৳{u.balance ?? 0}</td>
                     <td className="p-3 text-sm text-gray-600">{formatDate(u.created_at)}</td>
+                    <td className="p-3">
+                      <button
+                        onClick={() => loginAsUser(u)}
+                        disabled={loginLoadingId === u.id}
+                        className="px-3 py-1 text-xs rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+                      >
+                        {loginLoadingId === u.id ? "..." : "ইউজার হিসেবে লগইন"}
+                      </button>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td className="p-3 text-gray-500" colSpan="8">
+                  <td className="p-3 text-gray-500" colSpan="9">
                     কোন গ্রাহক পাওয়া যায়নি
                   </td>
                 </tr>
