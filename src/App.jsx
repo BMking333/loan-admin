@@ -9,6 +9,7 @@ import Reports from "./pages/Reports";
 import Documents from "./pages/Documents";
 import ChangePassword from "./pages/ChangePassword";
 import Others from "./pages/Others";
+import AdminPayment from "./pages/AdminPayment";
 import Userfulldetlise from "./components/Userfulldetlise";
 
 /* Layout */
@@ -20,7 +21,7 @@ const ProtectedRoute = ({ children }) => {
   return token ? children : <Navigate to="/" replace />;
 };
 
-/* 🔓 Public Route (NEW - important fix) */
+/* 🔓 Public Route */
 const PublicRoute = ({ children }) => {
   const token = localStorage.getItem("access");
   return token ? <Navigate to="/dashboard" replace /> : children;
@@ -122,7 +123,19 @@ function App() {
         }
       />
 
-      {/* ================= NEW ROUTE ================= */}
+      {/* ================= PAYMENT METHOD (ADMIN) ================= */}
+      <Route
+        path="/admin/payment"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <AdminPayment />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ================= USER FULL DETAILS ================= */}
       <Route
         path="/user-full-details"
         element={
