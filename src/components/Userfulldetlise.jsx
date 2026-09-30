@@ -59,7 +59,7 @@ const Userfulldetlise = ({ data }) => {
   const getImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith("http")) return path;
-    return `https://loan-server-1-do86.onrender.com${path}`;
+    return `https://loan.microfinancedevelopmentprojectbangladesh.com${path}`;
   };
 
   const row = "grid grid-cols-[150px_10px_1fr] gap-2 items-center py-2";
