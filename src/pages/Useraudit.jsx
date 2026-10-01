@@ -1,5 +1,5 @@
 // src/pages/Useraudit.jsx
-// Search + Customer + KYC + Payment + Loan cards in one file.
+// Search + Customer + KYC + Payment + Loan + Shot history cards in one file.
 import React, { useCallback, useEffect, useState } from "react";
 import api from "../services/api";
 
@@ -149,6 +149,12 @@ const LoginIcon = () => (
 const ChevronIcon = () => (
   <Svg className="w-5 h-5">
     <path d="M6 9l6 6 6-6" />
+  </Svg>
+);
+const CameraIcon = () => (
+  <Svg>
+    <path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" />
+    <circle cx="12" cy="13.5" r="3.5" />
   </Svg>
 );
 
@@ -936,6 +942,120 @@ const LoanEditCard = ({ loan, onUpdated }) => {
   );
 };
 
+/* ============================================================
+   SHOT HISTORY  (শট 9, 8, 7 ... 1 — নতুন আগে)
+============================================================ */
+const ShotHistoryCard = ({ loan }) => {
+  // সার্চ রেসপন্সে shot_history থাকলে সেটাই, না থাকলে null (পরে admin-list থেকে আনা হবে)
+  const [history, setHistory] = useState(
+    Array.isArray(loan?.shot_history) ? loan.shot_history : null
+  );
+  const [preview, setPreview] = useState(null);
+
+  useEffect(() => {
+    if (Array.isArray(loan?.shot_history)) {
+      setHistory(loan.shot_history);
+      return;
+    }
+
+    let alive = true;
+    api
+      .get("/loan/loan/admin-list", { headers: authHeader() })
+      .then((res) => {
+        const id = loan?.loan_id || loan?.id;
+        const found = (Array.isArray(res.data) ? res.data : []).find((l) => l.id === id);
+        if (alive) setHistory(Array.isArray(found?.shot_history) ? found.shot_history : []);
+      })
+      .catch(() => alive && setHistory([]));
+
+    return () => {
+      alive = false;
+    };
+  }, [loan]);
+
+  // শট নম্বর অনুযায়ী বড় থেকে ছোট
+  const items = (history || [])
+    .map((h, i) => ({ ...h, no: h.shot_no || i + 1 }))
+    .sort((a, b) => b.no - a.no);
+
+  return (
+    <Card
+      title="শট ইতিহাস"
+      icon={<CameraIcon />}
+      meta={history === null ? "লোড হচ্ছে..." : `মোট ${items.length} টি শট জমা হয়েছে`}
+    >
+      {history !== null && items.length === 0 && (
+        <div className="rounded-2xl border-2 border-dashed border-[#C9A24B]/30 bg-[#081A2B] p-5 text-center text-[15px] font-medium text-[#A9B7C2]">
+          এখনো কোনো শট জমা হয়নি
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {items.map((h) => (
+          <div
+            key={`${h.no}-${h.time}`}
+            className="rounded-2xl border border-[#C9A24B]/30 bg-[#081A2B] p-3.5 sm:p-4"
+          >
+            {/* উপরের সারি: শট নম্বর + পরিমাণ */}
+            <div className="flex items-center justify-between gap-3">
+              <span className={`rounded-full px-3.5 py-1 text-[14px] font-bold ${GOLD_GRAD}`}>
+                শট {h.no}
+              </span>
+              <span className="text-[18px] font-bold text-[#F2D98F]">
+                ৳{Number(h.amount || 0).toLocaleString("en-IN")}
+              </span>
+            </div>
+
+            {/* সময় + কে জমা দিয়েছে */}
+            <p className="mt-2.5 text-[13px] text-[#A9B7C2]">
+              জমার সময়: <span className="font-medium text-[#F5EBCB]">{fmtDate(h.time)}</span>
+            </p>
+            {h.submitted_by && (
+              <p className="text-[13px] text-[#A9B7C2]">
+                জমা দিয়েছেন: <span className="font-mono text-[#F5EBCB]">{h.submitted_by}</span>
+              </p>
+            )}
+
+            {/* তথ্য */}
+            {h.info ? (
+              <p className="mt-2.5 whitespace-pre-line rounded-xl bg-[#0D2538] px-3 py-2.5 text-[14px] leading-relaxed text-[#F5EBCB]">
+                {h.info}
+              </p>
+            ) : null}
+
+            {/* স্ক্রিনশট */}
+            {h.file ? (
+              <img
+                src={imageUrl(h.file)}
+                alt={`শট ${h.no} স্ক্রিনশট`}
+                loading="lazy"
+                onClick={() => setPreview(imageUrl(h.file))}
+                className="mt-3 max-h-64 w-full cursor-pointer rounded-xl border border-[#C9A24B]/40 object-contain transition hover:border-[#C9A24B]"
+              />
+            ) : (
+              <div className="mt-3 flex h-20 items-center justify-center rounded-xl border border-dashed border-[#C9A24B]/30 text-[13px] text-[#A9B7C2]">
+                স্ক্রিনশট নেই
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {preview && (
+        <div
+          onClick={() => setPreview(null)}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4"
+        >
+          <img src={preview} alt="preview" className="max-h-full max-w-full rounded-xl border border-[#C9A24B]/50" />
+        </div>
+      )}
+    </Card>
+  );
+};
+
+/* ============================================================
+   USER LOANS  (প্রতিটি লোনের নিচে শট ইতিহাস)
+============================================================ */
 const UserLoans = ({ user, onUpdated }) => {
   if (!user?.loans?.length) {
     return (
@@ -947,7 +1067,10 @@ const UserLoans = ({ user, onUpdated }) => {
   return (
     <div className="space-y-5">
       {user.loans.map((loan) => (
-        <LoanEditCard key={loan.loan_id || loan.id} loan={loan} onUpdated={onUpdated} />
+        <React.Fragment key={loan.loan_id || loan.id}>
+          <LoanEditCard loan={loan} onUpdated={onUpdated} />
+          <ShotHistoryCard loan={loan} />
+        </React.Fragment>
       ))}
     </div>
   );
