@@ -13,6 +13,11 @@ const menuItems = [
   { name: "অন্যান্য", path: "/others" },
 ];
 
+/* THEME: dark navy + gold
+   bar/sidebar  #040D16
+   hover        #0D2538
+   gold         #C9A24B   light gold #F2D98F   cream #F5EBCB */
+
 const Sidebar = () => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
@@ -44,17 +49,17 @@ const Sidebar = () => {
     <>
       {/* ================= Mobile Top Bar ================= */}
       <div
-        className="fixed left-0 top-0 z-50 flex w-full items-center justify-between border-b border-gray-800 bg-black px-4 text-white md:hidden"
+        className="fixed left-0 top-0 z-50 flex w-full items-center justify-between border-b border-[#C9A24B]/40 bg-[#040D16] px-4 text-white shadow-lg md:hidden"
         style={{
           paddingTop: "env(safe-area-inset-top, 0px)",
           height: "calc(56px + env(safe-area-inset-top, 0px))",
         }}
       >
-        <h2 className="text-[19px] font-bold">ম্যানেজার</h2>
+        <h2 className="text-[19px] font-bold text-[#F2D98F]">ম্যানেজার</h2>
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="flex h-11 w-11 items-center justify-center rounded-full transition hover:bg-white/10 active:scale-95"
+          className="flex h-11 w-11 items-center justify-center rounded-full text-[#F2D98F] transition hover:bg-[#C9A24B]/20 active:scale-95"
           aria-label={open ? "মেনু বন্ধ করুন" : "মেনু খুলুন"}
           aria-expanded={open}
         >
@@ -65,7 +70,7 @@ const Sidebar = () => {
       {/* ================= Overlay ================= */}
       <div
         onClick={() => setOpen(false)}
-        className={`fixed inset-0 z-40 bg-black/70 transition-opacity duration-300 md:hidden ${
+        className={`fixed inset-0 z-40 bg-black/75 transition-opacity duration-300 md:hidden ${
           open ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
         aria-hidden="true"
@@ -75,7 +80,7 @@ const Sidebar = () => {
       <aside
         className={`
           fixed left-0 top-0 z-50 flex h-[100dvh] w-[80%] max-w-[300px] flex-col
-          border-r border-gray-800 bg-black p-4 text-white
+          border-r border-[#C9A24B]/40 bg-[#040D16] p-4 text-[#F5EBCB]
           transform transition-transform duration-300 ease-out
           md:w-64 md:max-w-none md:translate-x-0
           ${open ? "translate-x-0" : "-translate-x-full"}
@@ -87,15 +92,17 @@ const Sidebar = () => {
         aria-label="প্রধান মেনু"
       >
         {/* Title */}
-        <h2 className="mb-6 hidden text-[22px] font-bold md:block">ম্যানেজার</h2>
+        <h2 className="mb-6 hidden border-b border-[#C9A24B]/30 pb-4 text-[22px] font-bold text-[#F2D98F] md:block">
+          ম্যানেজার
+        </h2>
 
         {/* Mobile menu header */}
-        <div className="mb-4 flex items-center justify-between md:hidden">
-          <h2 className="text-[20px] font-bold">মেনু</h2>
+        <div className="mb-4 flex items-center justify-between border-b border-[#C9A24B]/30 pb-3 md:hidden">
+          <h2 className="text-[20px] font-bold text-[#F2D98F]">মেনু</h2>
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="flex h-11 w-11 items-center justify-center rounded-full transition hover:bg-white/10 active:scale-95"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-[#F2D98F] transition hover:bg-[#C9A24B]/20 active:scale-95"
             aria-label="মেনু বন্ধ করুন"
           >
             <FiX size={24} />
@@ -112,8 +119,8 @@ const Sidebar = () => {
               className={({ isActive }) =>
                 `flex min-h-[48px] items-center rounded-xl px-4 text-[17px] transition active:scale-[0.98] ${
                   isActive
-                    ? "bg-white font-bold text-black"
-                    : "font-medium text-white/90 hover:bg-gray-900"
+                    ? "bg-gradient-to-b from-[#E8CB7E] via-[#C9A24B] to-[#B48A34] font-bold text-[#1B1405] shadow-[0_8px_20px_-8px_rgba(201,162,75,0.7)]"
+                    : "font-medium text-[#F5EBCB]/90 hover:bg-[#0D2538] hover:text-[#F2D98F]"
                 }`
               }
             >
@@ -126,7 +133,7 @@ const Sidebar = () => {
         <button
           type="button"
           onClick={handleLogout}
-          className="mt-4 min-h-[48px] rounded-xl bg-red-600 px-4 text-[17px] font-bold transition hover:bg-red-700 active:scale-[0.98]"
+          className="mt-4 min-h-[48px] rounded-xl bg-red-600 px-4 text-[17px] font-bold text-white transition hover:bg-red-700 active:scale-[0.98]"
         >
           লগ আউট
         </button>
