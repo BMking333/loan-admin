@@ -3,6 +3,9 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 
+import BKash from "../assets/icons/BKash.png";
+import Nagad from "../assets/icons/Nagad.png";
+
 /* ================= STYLES ================= */
 
 const styles = `
@@ -23,15 +26,7 @@ const styles = `
 .ap-pop { animation: ap-pop .18s ease-out; }
 `;
 
-/* ===== THEME: dark navy blue + gold =====
-   page bg      #06121F
-   card bg      #0D2538
-   field bg     #0A1D2E
-   cream text   #F5EBCB
-   muted text   #A9B7C2
-   gold         #C9A24B
-   light gold   #F2D98F
-*/
+/* ===== THEME: dark navy blue + gold ===== */
 
 const NAVY_BG = {
   background: "radial-gradient(900px 420px at 15% -20%, #1B4F66 0%, #071826 65%)",
@@ -46,24 +41,22 @@ const GOLD_BTN =
 const OUTLINE_GOLD_BTN =
   "border-2 border-[#C9A24B] text-[#F2D98F] hover:bg-[#C9A24B] hover:text-[#1B1405] active:scale-95";
 
-// Sidebar fixed থাকায় কনটেন্ট যেন তার নিচে ঢুকে না যায়:
-// মোবাইলে উপরে টপ বারের জায়গা, ডেস্কটপে বাঁদিকে সাইডবারের জায়গা
+// Sidebar fixed থাকায় কনটেন্ট যেন তার নিচে ঢুকে না যায়
 const OFFSET = "pt-[calc(56px+env(safe-area-inset-top,0px))] md:pt-0 md:pl-64";
 
 const INPUT =
   "w-full rounded-xl border-2 border-[#C9A24B]/40 bg-[#0A1D2E] px-4 py-3.5 text-[17px] font-medium text-[#F5EBCB] " +
   "placeholder:text-[#7F90A0] focus:border-[#C9A24B] focus:outline-none focus:ring-4 focus:ring-[#C9A24B]/25";
 
-/* ================= PAYMENT CHOICES ================= */
+/* ================= PAYMENT CHOICES (শুধু বিকাশ ও নগদ) ================= */
 
 const METHODS = [
-  { key: "bkash", label: "বিকাশ (bKash)", name: "Bkash", type: "mobile" },
-  { key: "nagad", label: "নগদ (Nagad)", name: "Nagad", type: "mobile" },
-  { key: "rocket", label: "রকেট (Rocket)", name: "Rocket", type: "mobile" },
-  { key: "bank", label: "ব্যাংক (Bank)", name: "", type: "bank" },
+  { key: "bkash", label: "বিকাশ (bKash)", bn: "বিকাশ", name: "Bkash", logo: BKash },
+  { key: "nagad", label: "নগদ (Nagad)", bn: "নগদ", name: "Nagad", logo: Nagad },
 ];
 
-const MOBILE_KEYS = ["bkash", "nagad", "rocket"];
+const keyOf = (m) => (m.method_name || "").trim().toLowerCase();
+const findMethod = (m) => METHODS.find((x) => x.key === keyOf(m));
 
 /* ================= ICONS ================= */
 
@@ -111,28 +104,9 @@ const TrashIcon = () => (
     <path d="M10 11v6M14 11v6" />
   </Svg>
 );
-const CopyIcon = () => (
-  <Svg className="w-4 h-4">
-    <rect x="9" y="9" width="12" height="12" rx="2" />
-    <path d="M5 15V5a2 2 0 0 1 2-2h10" />
-  </Svg>
-);
 const CloseIcon = () => (
   <Svg className="w-5 h-5">
     <path d="M6 6l12 12M18 6L6 18" />
-  </Svg>
-);
-const WalletIcon = () => (
-  <Svg>
-    <rect x="2" y="5" width="20" height="14" rx="2.5" />
-    <path d="M2 10h20M6 15h4" />
-  </Svg>
-);
-const BankIcon = () => (
-  <Svg>
-    <path d="M3 10l9-6 9 6" />
-    <path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8" />
-    <path d="M3 21h18" />
   </Svg>
 );
 const AlertIcon = () => (
@@ -161,19 +135,12 @@ const errText = (err, fallback) => {
   return fallback;
 };
 
-const isBankType = (m) =>
-  `${m.method_type || ""} ${m.method_name || ""}`.toLowerCase().includes("bank") ||
-  `${m.method_name || ""}`.includes("ব্যাংক");
-
 // বাংলা অঙ্ক -> ইংরেজি অঙ্ক
 const toEnDigits = (s) =>
   String(s).replace(/[০-৯]/g, (d) => "০১২৩৪৫৬৭৮৯".indexOf(d));
 
 const EMPTY_FORM = {
   choice: "",
-  bank_name: "",
-  custom_name: "",
-  legacy_type: "mobile",
   account_number: "",
   description: "",
   is_active: true,
@@ -199,7 +166,6 @@ const AdminPayment = () => {
   const [togglingId, setTogglingId] = useState(null);
 
   const [toast, setToast] = useState(null);
-  const [copiedId, setCopiedId] = useState(null);
 
   const showToast = (type, text) => {
     setToast({ type, text });
@@ -227,7 +193,16 @@ const AdminPayment = () => {
   const load = useCallback(async () => {
     try {
       const res = await api.get("/paymentmethod/admin", { headers: authHeaders() });
-      setItems(Array.isArray(res.data) ? res.data : []);
+      const list = Array.isArray(res.data) ? res.data : [];
+      // শুধু বিকাশ ও নগদ দেখাবে, বিকাশ আগে — রকেট ও ব্যাংক হাইড
+      const filtered = list
+        .filter((m) => findMethod(m))
+        .sort(
+          (a, b) =>
+            METHODS.findIndex((x) => x.key === keyOf(a)) -
+            METHODS.findIndex((x) => x.key === keyOf(b))
+        );
+      setItems(filtered);
     } catch (err) {
       if (!handleAuthError(err)) showToast("error", errText(err, "তালিকা লোড করা যায়নি"));
     } finally {
@@ -249,18 +224,10 @@ const AdminPayment = () => {
   };
 
   const openEdit = (m) => {
-    const name = (m.method_name || "").trim();
-    const found = METHODS.find((x) => x.type === "mobile" && x.name.toLowerCase() === name.toLowerCase());
-    let choice = "other";
-    if (found) choice = found.key;
-    else if (isBankType(m)) choice = "bank";
-
+    const found = findMethod(m);
     setEditingId(m.id);
     setForm({
-      choice,
-      bank_name: choice === "bank" ? name : "",
-      custom_name: choice === "other" ? name : "",
-      legacy_type: m.method_type || "mobile",
+      choice: found ? found.key : "",
       account_number: m.account_number || "",
       description: m.description || "",
       is_active: !!m.is_active,
@@ -276,41 +243,23 @@ const AdminPayment = () => {
 
   const setField = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  const isMobileChoice = MOBILE_KEYS.includes(form.choice);
-
   const submit = async (e) => {
     e.preventDefault();
     setFormError("");
 
     if (!form.choice) return setFormError("পেমেন্ট মেথড বেছে নিন");
-    if (form.choice === "bank" && !form.bank_name.trim()) return setFormError("ব্যাংকের নাম লিখুন");
-    if (form.choice === "other" && !form.custom_name.trim()) return setFormError("মেথডের নাম লিখুন");
 
     const number = toEnDigits(form.account_number).replace(/[\s-]/g, "");
-    if (!number) {
-      return setFormError(isMobileChoice ? "মোবাইল নম্বর লিখুন" : "অ্যাকাউন্ট নম্বর লিখুন");
-    }
-    if (isMobileChoice && !/^01\d{9}$/.test(number)) {
+    if (!number) return setFormError("মোবাইল নম্বর লিখুন");
+    if (!/^01\d{9}$/.test(number)) {
       return setFormError("১১ ডিজিটের সঠিক নম্বর দিন (01XXXXXXXXX)");
     }
 
-    let method_name = "";
-    let method_type = "";
-    if (isMobileChoice) {
-      const sel = METHODS.find((x) => x.key === form.choice);
-      method_name = sel.name;
-      method_type = "mobile";
-    } else if (form.choice === "bank") {
-      method_name = form.bank_name.trim();
-      method_type = "bank";
-    } else {
-      method_name = form.custom_name.trim();
-      method_type = form.legacy_type || "mobile";
-    }
+    const sel = METHODS.find((x) => x.key === form.choice);
 
     const payload = {
-      method_name,
-      method_type,
+      method_name: sel.name,
+      method_type: "mobile",
       account_number: number,
       description: form.description.trim(),
     };
@@ -372,16 +321,6 @@ const AdminPayment = () => {
     } finally {
       setDeleting(false);
     }
-  };
-
-  /* ---------- copy ---------- */
-
-  const copy = async (id, text) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedId(id);
-      setTimeout(() => setCopiedId(null), 1500);
-    } catch {}
   };
 
   const total = items.length;
@@ -469,7 +408,7 @@ const AdminPayment = () => {
           <section className="rounded-2xl border-2 border-[#C9A24B]/60 bg-[#0D2538] p-6 text-center">
             <h3 className="text-[19px] font-bold text-[#F2D98F]">কোনো পেমেন্ট মেথড নেই</h3>
             <p className="mt-1 text-[16px] font-medium text-[#D8CFB4]">
-              বিকাশ, নগদ, রকেট বা ব্যাংক বেছে নিয়ে প্রথম নম্বর যোগ করুন।
+              বিকাশ বা নগদ বেছে নিয়ে প্রথম নম্বর যোগ করুন।
             </p>
             <button
               onClick={openAdd}
@@ -480,107 +419,96 @@ const AdminPayment = () => {
           </section>
         )}
 
-        {/* ===== LIST ===== */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          {items.map((m) => (
-            <article
-              key={m.id}
-              className={`rounded-3xl border-2 bg-[#0D2538] p-4 shadow-[0_10px_40px_-20px_rgba(0,0,0,0.8)] transition sm:p-5 ${
-                m.is_active ? "border-[#C9A24B]/45" : "border-[#3A4A57] opacity-80"
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#C9A24B]/50 bg-[#16384F] text-[#F2D98F]">
-                  {isBankType(m) ? <BankIcon /> : <WalletIcon />}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <h3 className="truncate text-[20px] font-bold text-[#F5EBCB]">{m.method_name}</h3>
-                  <p className="text-[15px] font-medium text-[#A9B7C2]">{m.method_type}</p>
+        {/* ===== LIST (দুইটা কার্ড: বিকাশ + নগদ) ===== */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {items.map((m) => {
+            const meta = findMethod(m);
+            return (
+              <article
+                key={m.id}
+                className={`rounded-3xl border-2 bg-[#0D2538] p-4 shadow-[0_10px_40px_-20px_rgba(0,0,0,0.8)] transition sm:p-5 ${
+                  m.is_active ? "border-[#C9A24B]/45" : "border-[#3A4A57] opacity-80"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white p-2 shadow-[0_6px_16px_-6px_rgba(0,0,0,0.6)]">
+                    <img src={meta.logo} alt={meta.name} className="h-full w-full object-contain" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-[20px] font-bold text-[#F5EBCB]">{meta.bn}</h3>
+                    <p className="text-[15px] font-medium text-[#A9B7C2]">মোবাইল ব্যাংকিং</p>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-3 py-1 text-[14px] font-bold ${
+                      m.is_active
+                        ? "bg-[#C5EBD5] text-[#0C5A3B]"
+                        : "bg-[#E4E7EA] text-[#3F4A53]"
+                    }`}
+                  >
+                    {m.is_active ? "সক্রিয়" : "নিষ্ক্রিয়"}
+                  </span>
                 </div>
-                <span
-                  className={`shrink-0 rounded-full px-3 py-1 text-[14px] font-bold ${
-                    m.is_active
-                      ? "bg-[#C5EBD5] text-[#0C5A3B]"
-                      : "bg-[#E4E7EA] text-[#3F4A53]"
-                  }`}
-                >
-                  {m.is_active ? "সক্রিয়" : "নিষ্ক্রিয়"}
-                </span>
-              </div>
 
-              <div className="mt-4 flex items-center justify-between gap-2 rounded-2xl border border-[#C9A24B]/30 bg-[#081A2B] px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-[14px] font-medium text-[#A9B7C2]">
-                    {isBankType(m) ? "অ্যাকাউন্ট নম্বর" : "মোবাইল নম্বর"}
-                  </p>
+                <div className="mt-4 rounded-2xl border border-[#C9A24B]/30 bg-[#081A2B] px-4 py-3">
+                  <p className="text-[14px] font-medium text-[#A9B7C2]">মোবাইল নম্বর</p>
                   <p className="truncate font-mono text-[19px] font-bold tracking-wider text-[#F2D98F]">
                     {m.account_number || "—"}
                   </p>
                 </div>
-                {m.account_number && (
+
+                {m.description && (
+                  <p className="mt-3 whitespace-pre-line text-[16px] font-medium leading-[1.8] text-[#E6DCC0]">
+                    {m.description}
+                  </p>
+                )}
+
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#C9A24B]/25 pt-4">
+                  {/* toggle */}
                   <button
                     type="button"
-                    onClick={() => copy(m.id, m.account_number)}
-                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-b from-[#E8CB7E] to-[#B48A34] px-3.5 py-2 text-[14px] font-bold text-[#1B1405] transition hover:brightness-105 active:scale-95"
-                  >
-                    <CopyIcon />
-                    {copiedId === m.id ? "কপি হয়েছে" : "কপি"}
-                  </button>
-                )}
-              </div>
-
-              {m.description && (
-                <p className="mt-3 whitespace-pre-line text-[16px] font-medium leading-[1.8] text-[#E6DCC0]">
-                  {m.description}
-                </p>
-              )}
-
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#C9A24B]/25 pt-4">
-                {/* toggle */}
-                <button
-                  type="button"
-                  onClick={() => toggleActive(m)}
-                  disabled={togglingId === m.id}
-                  className="flex items-center gap-2.5 disabled:opacity-60"
-                  aria-label="সক্রিয় বা নিষ্ক্রিয় করুন"
-                >
-                  <span
-                    className={`relative h-7 w-12 rounded-full transition-colors ${
-                      m.is_active ? "bg-[#C9A24B]" : "bg-[#3A4A57]"
-                    }`}
+                    onClick={() => toggleActive(m)}
+                    disabled={togglingId === m.id}
+                    className="flex items-center gap-2.5 disabled:opacity-60"
+                    aria-label="সক্রিয় বা নিষ্ক্রিয় করুন"
                   >
                     <span
-                      className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${
-                        m.is_active ? "left-[22px]" : "left-0.5"
+                      className={`relative h-7 w-12 rounded-full transition-colors ${
+                        m.is_active ? "bg-[#C9A24B]" : "bg-[#3A4A57]"
                       }`}
-                    />
-                  </span>
-                  <span className="text-[15px] font-bold text-[#F5EBCB]">
-                    {m.is_active ? "চালু" : "বন্ধ"}
-                  </span>
-                </button>
+                    >
+                      <span
+                        className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${
+                          m.is_active ? "left-[22px]" : "left-0.5"
+                        }`}
+                      />
+                    </span>
+                    <span className="text-[15px] font-bold text-[#F5EBCB]">
+                      {m.is_active ? "চালু" : "বন্ধ"}
+                    </span>
+                  </button>
 
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(m)}
-                    className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-[15px] font-bold transition ${OUTLINE_GOLD_BTN}`}
-                  >
-                    <EditIcon />
-                    এডিট
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDeleteTarget(m)}
-                    className="flex items-center gap-1.5 rounded-full border-2 border-[#D64545] px-4 py-2 text-[15px] font-bold text-[#FF8A8A] transition hover:bg-[#D64545] hover:text-white active:scale-95"
-                  >
-                    <TrashIcon />
-                    মুছুন
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(m)}
+                      className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-[15px] font-bold transition ${OUTLINE_GOLD_BTN}`}
+                    >
+                      <EditIcon />
+                      এডিট
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteTarget(m)}
+                      className="flex items-center gap-1.5 rounded-full border-2 border-[#D64545] px-4 py-2 text-[15px] font-bold text-[#FF8A8A] transition hover:bg-[#D64545] hover:text-white active:scale-95"
+                    >
+                      <TrashIcon />
+                      মুছুন
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       </main>
 
@@ -610,7 +538,7 @@ const AdminPayment = () => {
             </div>
 
             <div className="space-y-4">
-              {/* ---- dropdown ---- */}
+              {/* ---- dropdown: শুধু বিকাশ ও নগদ ---- */}
               <Field label="পেমেন্ট মেথড বেছে নিন">
                 <div className="relative">
                   <select
@@ -626,11 +554,6 @@ const AdminPayment = () => {
                         {x.label}
                       </option>
                     ))}
-                    {form.choice === "other" && (
-                      <option value="other" className="bg-[#0A1D2E] text-[#F5EBCB]">
-                        অন্যান্য
-                      </option>
-                    )}
                   </select>
                   <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#F2D98F]">
                     <ChevronIcon />
@@ -638,39 +561,17 @@ const AdminPayment = () => {
                 </div>
               </Field>
 
-              {form.choice === "bank" && (
-                <Field label="ব্যাংকের নাম">
-                  <input
-                    className={INPUT}
-                    value={form.bank_name}
-                    onChange={(e) => setField("bank_name", e.target.value)}
-                    placeholder="যেমন: Dutch-Bangla Bank"
-                  />
-                </Field>
-              )}
-
-              {form.choice === "other" && (
-                <Field label="মেথডের নাম">
-                  <input
-                    className={INPUT}
-                    value={form.custom_name}
-                    onChange={(e) => setField("custom_name", e.target.value)}
-                    placeholder="মেথডের নাম"
-                  />
-                </Field>
-              )}
-
               {form.choice && (
-                <Field label={isMobileChoice ? "মোবাইল নম্বর" : "অ্যাকাউন্ট নম্বর"}>
+                <Field label="মোবাইল নম্বর">
                   <input
                     className={`${INPUT} font-mono tracking-wider`}
                     type="tel"
                     inputMode="numeric"
                     autoComplete="off"
-                    maxLength={isMobileChoice ? 11 : 30}
+                    maxLength={11}
                     value={form.account_number}
                     onChange={(e) => setField("account_number", toEnDigits(e.target.value))}
-                    placeholder={isMobileChoice ? "01XXXXXXXXX" : "অ্যাকাউন্ট নম্বর লিখুন"}
+                    placeholder="01XXXXXXXXX"
                   />
                 </Field>
               )}
@@ -748,7 +649,7 @@ const AdminPayment = () => {
             </span>
             <h3 className="mt-3 text-[21px] font-bold text-[#F2D98F]">মুছে ফেলবেন?</h3>
             <p className="mt-1 text-[17px] font-medium leading-[1.8] text-[#D8CFB4]">
-              "{deleteTarget.method_name}" স্থায়ীভাবে মুছে যাবে। এটি আর ফেরত আনা যাবে না।
+              "{findMethod(deleteTarget)?.bn || deleteTarget.method_name}" স্থায়ীভাবে মুছে যাবে। এটি আর ফেরত আনা যাবে না।
             </p>
             <div className="mt-5 grid grid-cols-2 gap-3">
               <button
