@@ -81,9 +81,10 @@ const CalcIcon = () => (
 const API_ACTIVE =
   "https://loan.microfinancedevelopmentprojectbangladesh.com/paymentmethod/active";
 
+// শুধু বিকাশ ও নগদ দেখানো হবে (রকেট ও ব্যাংক হাইড)
+const SHOWN = ["bkash", "nagad"];
 const BN_NAMES = { bkash: "বিকাশ", nagad: "নগদ" };
 const LOGOS = { bkash: BKash, nagad: Nagad };
-const ORDER = ["bkash", "nagad"];
 
 const keyOf = (item) => (item.method_name || "").trim().toLowerCase();
 
@@ -127,13 +128,12 @@ const Dashboard = () => {
         if (!res.ok) throw new Error("bad status");
         const data = await res.json();
         if (!alive) return;
-
-        // শুধু বিকাশ ও নগদ, এই ক্রমে
-        const list = (Array.isArray(data) ? data : [])
-          .filter((m) => m && ORDER.includes(keyOf(m)))
-          .sort((a, b) => ORDER.indexOf(keyOf(a)) - ORDER.indexOf(keyOf(b)));
-
-        setPaymentMethods(list);
+        const list = Array.isArray(data) ? data : [];
+        // শুধু বিকাশ ও নগদ, বিকাশ আগে
+        const filtered = list
+          .filter((x) => SHOWN.includes(keyOf(x)))
+          .sort((a, b) => SHOWN.indexOf(keyOf(a)) - SHOWN.indexOf(keyOf(b)));
+        setPaymentMethods(filtered);
         setPayError(false);
       } catch (err) {
         if (alive) setPayError(true);
@@ -180,7 +180,7 @@ const Dashboard = () => {
           </p>
         </section>
 
-        {/* ================= PAYMENT NUMBERS (একটাই কার্ড) ================= */}
+        {/* ================= PAYMENT NUMBERS ================= */}
         <section className="db-rise" style={{ animationDelay: "60ms" }}>
           <div className="mb-3 flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#C9A24B]/15 text-[#F2D98F]">
@@ -191,7 +191,14 @@ const Dashboard = () => {
 
           {/* loading skeleton */}
           {payLoading && (
-            <div className="db-skel h-[190px] rounded-3xl border border-[#C9A24B]/20 bg-[#0D2538]" />
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[0, 1].map((i) => (
+                <div
+                  key={i}
+                  className="db-skel h-[118px] rounded-3xl border border-[#C9A24B]/20 bg-[#0D2538]"
+                />
+              ))}
+            </div>
           )}
 
           {/* error */}
@@ -208,40 +215,48 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* একটাই কার্ডে বিকাশ + নগদ */}
+          {/* cards: শুধু বিকাশ ও নগদ */}
           {!payLoading && !payError && paymentMethods.length > 0 && (
-            <article className="rounded-3xl border-2 border-[#C9A24B]/40 bg-[#0D2538] p-4 shadow-[0_10px_40px_-20px_rgba(0,0,0,0.8)] sm:p-5">
-              <div className="divide-y divide-[#C9A24B]/20">
-                {paymentMethods.map((item) => {
-                  const k = keyOf(item);
-                  return (
-                    <div key={item.id} className="py-3.5 first:pt-0 last:pb-0">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white p-2 shadow-[0_6px_16px_-6px_rgba(0,0,0,0.6)]">
-                          <img
-                            src={LOGOS[k]}
-                            alt={item.method_name}
-                            className="h-full w-full object-contain"
-                          />
-                        </span>
-                        <div className="min-w-0">
-                          <h3 className="text-[20px] font-bold text-[#F5EBCB]">{BN_NAMES[k]}</h3>
-                          <p className="whitespace-nowrap font-mono text-[20px] font-bold tracking-wide text-[#F2D98F]">
-                            {item.account_number || "—"}
-                          </p>
-                        </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {paymentMethods.map((item) => {
+                const k = keyOf(item);
+                return (
+                  <article
+                    key={item.id}
+                    className="rounded-3xl border-2 border-[#C9A24B]/40 bg-[#0D2538] p-4 shadow-[0_10px_40px_-20px_rgba(0,0,0,0.8)]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white p-2 shadow-[0_6px_16px_-6px_rgba(0,0,0,0.6)]">
+                        <img
+                          src={LOGOS[k]}
+                          alt={item.method_name}
+                          className="h-full w-full object-contain"
+                        />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate text-[20px] font-bold text-[#F5EBCB]">
+                          {BN_NAMES[k]}
+                        </h3>
+                        <p className="text-[14px] font-medium text-[#A9B7C2]">মোবাইল ব্যাংকিং</p>
                       </div>
-
-                      {item.description && (
-                        <p className="mt-2.5 whitespace-pre-line text-[15px] font-medium leading-[1.75] text-[#E6DCC0]">
-                          {item.description}
-                        </p>
-                      )}
                     </div>
-                  );
-                })}
-              </div>
-            </article>
+
+                    <div className="mt-3.5 rounded-2xl border border-[#C9A24B]/30 bg-[#081A2B] px-4 py-3">
+                      <p className="text-[13px] font-medium text-[#A9B7C2]">নম্বর</p>
+                      <p className="truncate font-mono text-[20px] font-bold tracking-wider text-[#F2D98F]">
+                        {item.account_number || "—"}
+                      </p>
+                    </div>
+
+                    {item.description && (
+                      <p className="mt-3 whitespace-pre-line text-[15px] font-medium leading-[1.75] text-[#E6DCC0]">
+                        {item.description}
+                      </p>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
           )}
         </section>
 
