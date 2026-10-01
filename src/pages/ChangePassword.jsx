@@ -5,67 +5,97 @@ import api from "../services/api";
 // ⚠️ আপনার রাউটারের prefix থাকলে এখানে বদলে নিন (যেমন "/auth/admin/user-reset-password")
 const ENDPOINT = "/admin/user-reset-password";
 
-// টোকেন আপনার Login পেজে যে key-তে সেভ করেছেন সেটা দিন
 const getToken = () =>
   localStorage.getItem("access") ||
   localStorage.getItem("token") ||
   localStorage.getItem("access_token");
 
-// পাসওয়ার্ডের শক্তি: 0–4
-const getStrength = (pw) => {
-  let s = 0;
-  if (pw.length >= 8) s++;
-  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) s++;
-  if (/\d/.test(pw)) s++;
-  if (/[^A-Za-z0-9]/.test(pw)) s++;
-  return s;
-};
-
-const STRENGTH_LABEL = ["খুব দুর্বল", "দুর্বল", "মোটামুটি", "ভালো", "শক্তিশালী"];
-const STRENGTH_COLOR = [
-  "bg-red-500",
-  "bg-red-500",
-  "bg-yellow-500",
-  "bg-[#D4AF37]",
-  "bg-green-500",
-];
-
 // বাংলা ডিজিট -> ইংরেজি ডিজিট
 const bnToEn = (str) =>
   str.replace(/[০-৯]/g, (d) => "০১২৩৪৫৬৭৮৯".indexOf(d).toString());
 
-/* ---------------- Icons ---------------- */
-const PhoneIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372a1.125 1.125 0 00-.852-1.091l-4.423-1.106a1.125 1.125 0 00-1.173.417l-.97 1.293a1.125 1.125 0 01-1.21.38 12.035 12.035 0 01-7.143-7.143 1.125 1.125 0 01.38-1.21l1.293-.97a1.125 1.125 0 00.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"
-    />
+/* ================= STYLES ================= */
+const styles = `
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap');
+
+.cp-root {
+  font-family: 'Noto Sans Bengali', 'Hind Siliguri', 'Kalpurush', system-ui, sans-serif;
+  font-feature-settings: "liga" 1, "clig" 1, "rlig" 1, "calt" 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  line-height: 1.7;
+}
+.cp-root h1, .cp-root h2, .cp-root p, .cp-root span, .cp-root button, .cp-root label {
+  letter-spacing: 0 !important;
+}
+.cp-root input { font-size: 16px; }
+@keyframes cp-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.cp-rise { animation: cp-rise .3s ease-out both; }
+@media (prefers-reduced-motion: reduce) { .cp-rise { animation: none; } }
+`;
+
+/* ===== THEME: dark navy + gold ===== */
+const OFFSET = "pt-[calc(56px+env(safe-area-inset-top,0px))] md:pt-0 md:pl-64";
+
+const HERO_BG = {
+  background:
+    "radial-gradient(700px 320px at 10% -30%, #1E5A74 0%, transparent 60%), linear-gradient(160deg, #0F3045 0%, #071826 70%)",
+};
+
+const GOLD_BTN =
+  "bg-gradient-to-b from-[#E8CB7E] via-[#C9A24B] to-[#B48A34] text-[#1B1405] " +
+  "shadow-[0_10px_24px_-8px_rgba(201,162,75,0.7),inset_0_1px_0_rgba(255,255,255,0.5)] " +
+  "hover:brightness-105 active:translate-y-px " +
+  "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#C9A24B]/40 " +
+  "disabled:cursor-not-allowed disabled:opacity-60";
+
+/* ================= ICONS ================= */
+const Svg = ({ children, className = "w-5 h-5", strokeWidth = 1.8 }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={strokeWidth}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden="true"
+  >
+    {children}
   </svg>
+);
+
+const PhoneIcon = () => (
+  <Svg>
+    <rect x="6" y="2.5" width="12" height="19" rx="2.5" />
+    <path d="M11 18.5h2" />
+  </Svg>
 );
 
 const LockIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
-    />
-  </svg>
+  <Svg>
+    <rect x="4" y="11" width="16" height="10" rx="2.5" />
+    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+  </Svg>
 );
 
 const ShieldIcon = () => (
-  <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.8">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"
-    />
-  </svg>
+  <Svg className="h-7 w-7" strokeWidth={1.9}>
+    <path d="M12 2l8 3v6c0 5-3.5 9.5-8 11-4.5-1.5-8-6-8-11V5l8-3z" />
+    <path d="M9 12l2 2 4-4" />
+  </Svg>
 );
 
-/* ---------------- Input Field ---------------- */
+const EyeIcon = ({ off }) => (
+  <Svg>
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+    <circle cx="12" cy="12" r="3" />
+    {off && <path d="M3 3l18 18" />}
+  </Svg>
+);
+
+/* ================= INPUT FIELD ================= */
 const Field = ({
   label,
   name,
@@ -84,17 +114,19 @@ const Field = ({
 
   return (
     <div>
-      <label htmlFor={name} className="mb-2 block text-sm font-medium text-gray-300">
+      <label htmlFor={name} className="mb-1.5 block text-[15px] font-semibold text-[#F2D98F]/90">
         {label}
       </label>
+
       <div className="group relative">
         <span
-          className={`pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 transition-colors ${
-            error ? "text-red-400" : "text-gray-500 group-focus-within:text-[#D4AF37]"
+          className={`pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
+            error ? "text-[#FF8A8A]" : "text-[#7F90A0] group-focus-within:text-[#F2D98F]"
           }`}
         >
           {icon}
         </span>
+
         <input
           id={name}
           name={name}
@@ -105,40 +137,40 @@ const Field = ({
           placeholder={placeholder}
           inputMode={inputMode}
           maxLength={maxLength}
-          className={`w-full rounded-xl border bg-[#14233a] py-3.5 pl-11 ${
-            isPassword ? "pr-20" : "pr-4"
-          } text-[15px] text-white placeholder-gray-500 outline-none transition
-            ${
-              error
-                ? "border-red-500/70 focus:ring-2 focus:ring-red-500/20"
-                : "border-white/5 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
-            }`}
+          aria-invalid={error ? "true" : "false"}
+          className={`w-full min-w-0 rounded-xl border-2 bg-[#0A1D2E] py-3.5 pl-12 ${
+            isPassword ? "pr-14" : "pr-4"
+          } font-medium text-[#F5EBCB] outline-none transition placeholder:text-[#7F90A0] focus:ring-4 ${
+            error
+              ? "border-[#D64545]/70 focus:border-[#D64545] focus:ring-[#D64545]/20"
+              : "border-[#C9A24B]/30 focus:border-[#C9A24B] focus:ring-[#C9A24B]/20"
+          }`}
         />
+
         {isPassword && (
           <button
             type="button"
             onClick={() => setShow((v) => !v)}
-            className="absolute inset-y-0 right-0 px-4 text-xs font-medium text-[#D4AF37] hover:text-[#f0cf62]"
+            className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-[#F2D98F] transition hover:bg-[#C9A24B]/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A24B]/50"
             aria-label={show ? "পাসওয়ার্ড লুকান" : "পাসওয়ার্ড দেখান"}
           >
-            {show ? "লুকান" : "দেখান"}
+            <EyeIcon off={show} />
           </button>
         )}
       </div>
-      {error && <p className="mt-1.5 text-xs text-red-400">{error}</p>}
+
+      {error && <p className="mt-1.5 text-[14px] font-semibold text-[#FF8A8A]">{error}</p>}
     </div>
   );
 };
 
-/* ---------------- Page ---------------- */
+/* ================= PAGE ================= */
 const ChangePassword = () => {
-  const [form, setForm] = useState({ phone: "", next: "", confirm: "" });
+  const [form, setForm] = useState({ phone: "", next: "" });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState(null);
-  const [done, setDone] = useState(null); // সফল হলে কার পাসওয়ার্ড বদলেছে
-
-  const strength = getStrength(form.next);
+  const [done, setDone] = useState(null);
 
   const handleChange = (e) => {
     let { name, value } = e.target;
@@ -156,14 +188,10 @@ const ChangePassword = () => {
     const e = {};
 
     if (!form.phone) e.phone = "ইউজারের মোবাইল নাম্বার দিন";
-    else if (form.phone.replace(/\D/g, "").length < 10)
-      e.phone = "সঠিক মোবাইল নাম্বার দিন";
+    else if (form.phone.replace(/\D/g, "").length < 10) e.phone = "সঠিক মোবাইল নাম্বার দিন";
 
     if (!form.next) e.next = "নতুন পাসওয়ার্ড দিন";
     else if (form.next.length < 6) e.next = "কমপক্ষে ৬ অক্ষর হতে হবে";
-
-    if (!form.confirm) e.confirm = "পাসওয়ার্ড আবার লিখুন";
-    else if (form.confirm !== form.next) e.confirm = "পাসওয়ার্ড মিলছে না";
 
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -190,7 +218,7 @@ const ChangePassword = () => {
       });
 
       setDone(form.phone.trim());
-      setForm({ phone: "", next: "", confirm: "" });
+      setForm({ phone: "", next: "" });
       setNotice({ type: "ok", text: "ইউজারের পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে" });
     } catch (err) {
       console.error(err);
@@ -201,139 +229,105 @@ const ChangePassword = () => {
       else if (status === 403) text = "শুধু অ্যাডমিন এই কাজ করতে পারবে";
       else if (status === 401) text = "সেশন শেষ হয়েছে, আবার লগইন করুন";
 
-      setNotice({ type: "err", text: typeof text === "string" ? text : "পাসওয়ার্ড পরিবর্তন করা যায়নি" });
+      setNotice({
+        type: "err",
+        text: typeof text === "string" ? text : "পাসওয়ার্ড পরিবর্তন করা যায়নি",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0b1220] text-white">
-      {/* ব্যাকগ্রাউন্ড গ্লো */}
-      <div className="pointer-events-none absolute -top-32 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-[#D4AF37]/10 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-0 right-0 h-64 w-64 rounded-full bg-blue-500/5 blur-3xl" />
+    <div lang="bn" className={`cp-root min-h-screen bg-[#06121F] pb-16 text-[#F5EBCB] ${OFFSET}`}>
+      <style>{styles}</style>
 
-      {/* মোবাইলে উপরে নেভ বারের জায়গা, ডেস্কটপে বাঁ দিকে সাইডবারের জায়গা */}
-      <div className="relative px-4 pb-12 pt-20 md:ml-64 md:p-8">
-        <div className="mx-auto w-full max-w-md md:mt-8">
-          {/* CARD */}
-          <div className="rounded-3xl border border-[#D4AF37]/20 bg-gradient-to-b from-[#12213a] to-[#0d1829] p-5 shadow-2xl shadow-black/40 sm:p-8">
-            {/* HEADER */}
-            <div className="mb-7 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#D4AF37]/30 bg-[#D4AF37]/10 text-[#D4AF37] shadow-lg shadow-[#D4AF37]/10">
-                <ShieldIcon />
-              </div>
-              <h1 className="text-xl font-bold text-[#D4AF37] sm:text-2xl">
-                ইউজার পাসওয়ার্ড রিসেট
-              </h1>
-              <p className="mt-2 text-sm leading-relaxed text-gray-400">
-                ইউজারের মোবাইল নাম্বার দিয়ে নতুন পাসওয়ার্ড সেট করুন। পুরনো পাসওয়ার্ড লাগবে না।
-              </p>
-            </div>
-
-            {/* NOTICE */}
-            {notice && (
-              <div
-                role="alert"
-                className={`mb-5 flex items-start gap-2 rounded-xl border px-3.5 py-3 text-sm ${
-                  notice.type === "ok"
-                    ? "border-green-500/20 bg-green-500/10 text-green-400"
-                    : "border-red-500/20 bg-red-500/10 text-red-400"
-                }`}
-              >
-                <span>{notice.type === "ok" ? "✅" : "⚠️"}</span>
-                <div>
-                  <p>{notice.text}</p>
-                  {notice.type === "ok" && done && (
-                    <p className="mt-0.5 text-xs text-green-300/80">নাম্বার: {done}</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-              <Field
-                label="ইউজারের মোবাইল নাম্বার"
-                name="phone"
-                type="tel"
-                inputMode="numeric"
-                autoComplete="off"
-                placeholder="01XXXXXXXXX"
-                maxLength={15}
-                value={form.phone}
-                onChange={handleChange}
-                icon={<PhoneIcon />}
-                error={errors.phone}
-              />
-
-              <div>
-                <Field
-                  label="নতুন পাসওয়ার্ড"
-                  name="next"
-                  isPassword
-                  autoComplete="new-password"
-                  placeholder="নতুন পাসওয়ার্ড লিখুন"
-                  value={form.next}
-                  onChange={handleChange}
-                  icon={<LockIcon />}
-                  error={errors.next}
-                />
-
-                {form.next && (
-                  <div className="mt-2.5">
-                    <div className="flex gap-1.5">
-                      {[1, 2, 3, 4].map((i) => (
-                        <span
-                          key={i}
-                          className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
-                            strength >= i ? STRENGTH_COLOR[strength] : "bg-gray-700"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <p className="mt-1.5 text-xs text-gray-400">{STRENGTH_LABEL[strength]}</p>
-                  </div>
-                )}
-              </div>
-
-              <Field
-                label="নতুন পাসওয়ার্ড নিশ্চিত করুন"
-                name="confirm"
-                isPassword
-                autoComplete="new-password"
-                placeholder="পাসওয়ার্ড আবার লিখুন"
-                value={form.confirm}
-                onChange={handleChange}
-                icon={<LockIcon />}
-                error={errors.confirm}
-              />
-
-              <button
-                type="submit"
-                disabled={loading}
-                className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-[15px] font-semibold transition
-                  ${
-                    loading
-                      ? "cursor-not-allowed bg-[#D4AF37]/60 text-[#0b1220]"
-                      : "bg-gradient-to-r from-[#D4AF37] to-[#f0cf62] text-[#0b1220] shadow-lg shadow-[#D4AF37]/20 hover:brightness-105 active:scale-[0.98]"
-                  }`}
-              >
-                {loading ? (
-                  <>
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    আপডেট হচ্ছে...
-                  </>
-                ) : (
-                  "পাসওয়ার্ড পরিবর্তন করুন"
-                )}
-              </button>
-            </form>
+      <div className="mx-auto max-w-md px-4 pt-6 md:pt-12">
+        {/* ===== HEADER ===== */}
+        <section
+          className="cp-rise relative overflow-hidden rounded-3xl border border-[#C9A24B]/50 p-6 text-center shadow-[0_24px_60px_-24px_rgba(0,0,0,0.9)]"
+          style={HERO_BG}
+        >
+          <span className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full border border-[#C9A24B]/25" />
+          <div className="relative">
+            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[#C9A24B]/60 bg-[#C9A24B]/15 text-[#F2D98F]">
+              <ShieldIcon />
+            </span>
+            <h1 className="mt-4 text-[22px] font-bold text-[#F2D98F]">ইউজার পাসওয়ার্ড রিসেট</h1>
+            <p className="mt-1.5 text-[15px] leading-relaxed text-white/75">
+              মোবাইল নাম্বার ও নতুন পাসওয়ার্ড দিলেই হবে। পুরনো পাসওয়ার্ড লাগবে না।
+            </p>
           </div>
+        </section>
 
-          <p className="mt-5 text-center text-xs text-gray-500">
-            🔐 এই পেজ শুধু অ্যাডমিনের জন্য
-          </p>
-        </div>
+        {/* ===== FORM CARD ===== */}
+        <section className="cp-rise mt-5 rounded-3xl border-2 border-[#C9A24B]/30 bg-[#0D2538] p-5 shadow-[0_10px_40px_-20px_rgba(0,0,0,0.85)] sm:p-6">
+          {notice && (
+            <div
+              role="alert"
+              className={`mb-5 rounded-xl border px-3.5 py-3 text-[15px] font-semibold ${
+                notice.type === "ok"
+                  ? "border-[#1F9D6B]/50 bg-[#0C3A2A] text-[#9FE5C4]"
+                  : "border-[#D64545]/50 bg-[#3A1417] text-[#FFB3B3]"
+              }`}
+            >
+              <p>
+                {notice.type === "ok" ? "✅ " : "⚠️ "}
+                {notice.text}
+              </p>
+              {notice.type === "ok" && done && (
+                <p className="mt-0.5 font-mono text-[13px] font-medium text-[#9FE5C4]/80">নাম্বার: {done}</p>
+              )}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+            <Field
+              label="ইউজারের মোবাইল নাম্বার"
+              name="phone"
+              type="tel"
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="01XXXXXXXXX"
+              maxLength={15}
+              value={form.phone}
+              onChange={handleChange}
+              icon={<PhoneIcon />}
+              error={errors.phone}
+            />
+
+            <Field
+              label="নতুন পাসওয়ার্ড"
+              name="next"
+              isPassword
+              autoComplete="new-password"
+              placeholder="নতুন পাসওয়ার্ড লিখুন"
+              value={form.next}
+              onChange={handleChange}
+              icon={<LockIcon />}
+              error={errors.next}
+            />
+
+            <button
+              type="submit"
+              disabled={loading}
+              className={`flex w-full items-center justify-center gap-2.5 rounded-xl py-3.5 text-[17px] font-bold transition ${GOLD_BTN}`}
+            >
+              {loading ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  আপডেট হচ্ছে...
+                </>
+              ) : (
+                "পাসওয়ার্ড পরিবর্তন করুন"
+              )}
+            </button>
+          </form>
+        </section>
+
+        <p className="mt-5 text-center text-[13px] font-medium text-[#A9B7C2]">
+          এই পেজ শুধু অ্যাডমিনের জন্য
+        </p>
       </div>
     </div>
   );
