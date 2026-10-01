@@ -8,6 +8,7 @@ const menuItems = [
   { name: "সব গ্রাহক", path: "/customers" },
   { name: "নথি তৈরী", path: "/documents" },
   { name: "রিপোর্ট", path: "/reports" },
+  { name: "স্টাফ", path: "/staff" },
   { name: "পেমেন্ট মেথড", path: "/admin/payment" },
   { name: "পাসওয়ার্ড পরিবর্তন", path: "/change-password" },
   { name: "অন্যান্য", path: "/others" },
