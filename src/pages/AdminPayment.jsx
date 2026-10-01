@@ -214,9 +214,20 @@ const AdminPayment = () => {
     load();
   }, [load]);
 
+  /* ---------- একটা মেথড একবারের বেশি নয় ---------- */
+
+  // এডিট করা আইটেম বাদে যেগুলো আগেই যোগ করা আছে
+  const takenKeys = items.filter((m) => m.id !== editingId).map(keyOf);
+  // বিকাশ ও নগদ দুইটাই যোগ করা হয়ে গেছে কি না
+  const allAdded = METHODS.every((x) => items.some((m) => keyOf(m) === x.key));
+
   /* ---------- modal ---------- */
 
   const openAdd = () => {
+    if (allAdded) {
+      showToast("error", "বিকাশ ও নগদ দুইটাই আগে যোগ করা আছে");
+      return;
+    }
     setEditingId(null);
     setForm(EMPTY_FORM);
     setFormError("");
@@ -248,6 +259,9 @@ const AdminPayment = () => {
     setFormError("");
 
     if (!form.choice) return setFormError("পেমেন্ট মেথড বেছে নিন");
+    if (takenKeys.includes(form.choice)) {
+      return setFormError("এই পেমেন্ট মেথড আগেই যোগ করা আছে, একটার বেশি যোগ করা যাবে না");
+    }
 
     const number = toEnDigits(form.account_number).replace(/[\s-]/g, "");
     if (!number) return setFormError("মোবাইল নম্বর লিখুন");
@@ -384,7 +398,10 @@ const AdminPayment = () => {
           </h1>
           <button
             onClick={openAdd}
-            className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[16px] font-bold transition ${GOLD_BTN}`}
+            aria-disabled={allAdded}
+            className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[16px] font-bold transition ${GOLD_BTN} ${
+              allAdded ? "opacity-50" : ""
+            }`}
           >
             <PlusIcon />
             নতুন
@@ -549,11 +566,20 @@ const AdminPayment = () => {
                     <option value="" disabled className="bg-[#0A1D2E] text-[#7F90A0]">
                       -- বেছে নিন --
                     </option>
-                    {METHODS.map((x) => (
-                      <option key={x.key} value={x.key} className="bg-[#0A1D2E] text-[#F5EBCB]">
-                        {x.label}
-                      </option>
-                    ))}
+                    {METHODS.map((x) => {
+                      const taken = takenKeys.includes(x.key);
+                      return (
+                        <option
+                          key={x.key}
+                          value={x.key}
+                          disabled={taken}
+                          className="bg-[#0A1D2E] text-[#F5EBCB]"
+                        >
+                          {x.label}
+                          {taken ? " — আগেই যোগ করা আছে" : ""}
+                        </option>
+                      );
+                    })}
                   </select>
                   <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#F2D98F]">
                     <ChevronIcon />
