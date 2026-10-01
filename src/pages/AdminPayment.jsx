@@ -46,6 +46,10 @@ const GOLD_BTN =
 const OUTLINE_GOLD_BTN =
   "border-2 border-[#C9A24B] text-[#F2D98F] hover:bg-[#C9A24B] hover:text-[#1B1405] active:scale-95";
 
+// Sidebar fixed থাকায় কনটেন্ট যেন তার নিচে ঢুকে না যায়:
+// মোবাইলে উপরে টপ বারের জায়গা, ডেস্কটপে বাঁদিকে সাইডবারের জায়গা
+const OFFSET = "pt-[calc(56px+env(safe-area-inset-top,0px))] md:pt-0 md:pl-64";
+
 const INPUT =
   "w-full rounded-xl border-2 border-[#C9A24B]/40 bg-[#0A1D2E] px-4 py-3.5 text-[17px] font-medium text-[#F5EBCB] " +
   "placeholder:text-[#7F90A0] focus:border-[#C9A24B] focus:outline-none focus:ring-4 focus:ring-[#C9A24B]/25";
@@ -387,7 +391,7 @@ const AdminPayment = () => {
   /* ================= LOADING ================= */
   if (loading) {
     return (
-      <div className="ap-root flex min-h-screen flex-col items-center justify-center gap-4 bg-[#06121F]">
+      <div className={`ap-root flex min-h-screen flex-col items-center justify-center gap-4 bg-[#06121F] ${OFFSET}`}>
         <style>{styles}</style>
         <svg className="h-10 w-10 animate-spin text-[#C9A24B]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
@@ -401,7 +405,7 @@ const AdminPayment = () => {
   /* ================= FORBIDDEN ================= */
   if (forbidden) {
     return (
-      <div className="ap-root flex min-h-screen items-center justify-center bg-[#06121F] px-4">
+      <div className={`ap-root flex min-h-screen items-center justify-center bg-[#06121F] px-4 ${OFFSET}`}>
         <style>{styles}</style>
         <div className="w-full max-w-md rounded-2xl border-2 border-[#EDA9A9] bg-[#FDECEC] p-6 text-center">
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#F8CFCF] text-[#B92A2A]">
@@ -423,11 +427,11 @@ const AdminPayment = () => {
   }
 
   return (
-    <div className="ap-root min-h-screen bg-[#06121F] pb-24 text-[#F5EBCB]">
+    <div className={`ap-root min-h-screen bg-[#06121F] pb-24 text-[#F5EBCB] ${OFFSET}`}>
       <style>{styles}</style>
 
       {/* ===== TOP BAR ===== */}
-      <header className="sticky top-[calc(56px+env(safe-area-inset-top,0px))] z-30 border-b md:top-0 border-[#C9A24B]/40 bg-[#040D16] text-white shadow-lg">
+      <header className="sticky top-[calc(56px+env(safe-area-inset-top,0px))] z-30 border-b border-[#C9A24B]/40 bg-[#040D16] text-white shadow-lg md:top-0">
         <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3.5">
           <button
             onClick={() => navigate(-1)}
