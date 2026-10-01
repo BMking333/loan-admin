@@ -63,35 +63,10 @@ const Svg = ({ children, className = "w-6 h-6" }) => (
   </svg>
 );
 
-const BankIcon = () => (
-  <Svg>
-    <path d="M3 10l9-6 9 6" />
-    <path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8" />
-    <path d="M3 21h18" />
-  </Svg>
-);
-const RocketIcon = () => (
-  <Svg>
-    <path d="M5 15c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2.1-.1-2.9A2.2 2.2 0 0 0 5 15z" />
-    <path d="M12 15l-3-3a22 22 0 0 1 2-4 12.9 12.9 0 0 1 11-6c0 2.7-.8 7.5-6 11a22 22 0 0 1-4 2z" />
-    <path d="M9 12H4s.6-3 2-4c1.6-1.1 5 0 5 0M12 15v5s3-.6 4-2c1.1-1.6 0-5 0-5" />
-  </Svg>
-);
 const WalletIcon = () => (
   <Svg>
     <rect x="2" y="5" width="20" height="14" rx="2.5" />
     <path d="M2 10h20M6 15h4" />
-  </Svg>
-);
-const CopyIcon = () => (
-  <Svg className="w-4 h-4">
-    <rect x="9" y="9" width="12" height="12" rx="2" />
-    <path d="M5 15V5a2 2 0 0 1 2-2h10" />
-  </Svg>
-);
-const CheckIcon = () => (
-  <Svg className="w-4 h-4">
-    <path d="M5 12.5l4.5 4.5L19 7.5" />
   </Svg>
 );
 const CalcIcon = () => (
@@ -106,15 +81,11 @@ const CalcIcon = () => (
 const API_ACTIVE =
   "https://loan.microfinancedevelopmentprojectbangladesh.com/paymentmethod/active";
 
-const BN_NAMES = { bkash: "বিকাশ", nagad: "নগদ", rocket: "রকেট" };
+const BN_NAMES = { bkash: "বিকাশ", nagad: "নগদ" };
+const LOGOS = { bkash: BKash, nagad: Nagad };
+const ORDER = ["bkash", "nagad"];
 
 const keyOf = (item) => (item.method_name || "").trim().toLowerCase();
-
-const isBank = (item) =>
-  `${item.method_type || ""} ${item.method_name || ""}`.toLowerCase().includes("bank") ||
-  `${item.method_name || ""}`.includes("ব্যাংক");
-
-const bnName = (item) => BN_NAMES[keyOf(item)] || item.method_name;
 
 const toBn = (n) =>
   String(n).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[d]);
@@ -146,7 +117,6 @@ const Dashboard = () => {
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [payLoading, setPayLoading] = useState(true);
   const [payError, setPayError] = useState(false);
-  const [copiedId, setCopiedId] = useState(null);
 
   /* ---------- fetch active payment numbers ---------- */
   useEffect(() => {
@@ -157,8 +127,13 @@ const Dashboard = () => {
         if (!res.ok) throw new Error("bad status");
         const data = await res.json();
         if (!alive) return;
-        // অ্যাডমিন যা যা সক্রিয় করেছে (বিকাশ, নগদ, রকেট, ব্যাংক) সবই দেখাবে
-        setPaymentMethods(Array.isArray(data) ? data : []);
+
+        // শুধু বিকাশ ও নগদ, এই ক্রমে
+        const list = (Array.isArray(data) ? data : [])
+          .filter((m) => m && ORDER.includes(keyOf(m)))
+          .sort((a, b) => ORDER.indexOf(keyOf(a)) - ORDER.indexOf(keyOf(b)));
+
+        setPaymentMethods(list);
         setPayError(false);
       } catch (err) {
         if (alive) setPayError(true);
@@ -170,14 +145,6 @@ const Dashboard = () => {
       alive = false;
     };
   }, []);
-
-  const copy = async (id, text) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedId(id);
-      setTimeout(() => setCopiedId(null), 1500);
-    } catch {}
-  };
 
   /* ---------- calculation ---------- */
   const result = useMemo(() => {
@@ -191,27 +158,6 @@ const Dashboard = () => {
       interest: totalInterest,
     };
   }, [months, amount]);
-
-  /* ---------- payment icon tile ---------- */
-  const IconTile = ({ item }) => {
-    const k = keyOf(item);
-    if (k === "bkash" || k === "nagad") {
-      return (
-        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white p-2 shadow-[0_6px_16px_-6px_rgba(0,0,0,0.6)]">
-          <img
-            src={k === "bkash" ? BKash : Nagad}
-            alt={item.method_name}
-            className="h-full w-full object-contain"
-          />
-        </span>
-      );
-    }
-    return (
-      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#C9A24B]/50 bg-[#16384F] text-[#F2D98F]">
-        {k === "rocket" ? <RocketIcon /> : isBank(item) ? <BankIcon /> : <WalletIcon />}
-      </span>
-    );
-  };
 
   return (
     <div className={`db-root min-h-screen bg-[#06121F] pb-16 text-[#F5EBCB] ${OFFSET}`}>
@@ -234,7 +180,7 @@ const Dashboard = () => {
           </p>
         </section>
 
-        {/* ================= PAYMENT NUMBERS ================= */}
+        {/* ================= PAYMENT NUMBERS (একটাই কার্ড) ================= */}
         <section className="db-rise" style={{ animationDelay: "60ms" }}>
           <div className="mb-3 flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#C9A24B]/15 text-[#F2D98F]">
@@ -245,14 +191,7 @@ const Dashboard = () => {
 
           {/* loading skeleton */}
           {payLoading && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {[0, 1].map((i) => (
-                <div
-                  key={i}
-                  className="db-skel h-[118px] rounded-3xl border border-[#C9A24B]/20 bg-[#0D2538]"
-                />
-              ))}
-            </div>
+            <div className="db-skel h-[190px] rounded-3xl border border-[#C9A24B]/20 bg-[#0D2538]" />
           )}
 
           {/* error */}
@@ -269,55 +208,40 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* cards */}
+          {/* একটাই কার্ডে বিকাশ + নগদ */}
           {!payLoading && !payError && paymentMethods.length > 0 && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {paymentMethods.map((item) => (
-                <article
-                  key={item.id}
-                  className="rounded-3xl border-2 border-[#C9A24B]/40 bg-[#0D2538] p-4 shadow-[0_10px_40px_-20px_rgba(0,0,0,0.8)]"
-                >
-                  <div className="flex items-center gap-3">
-                    <IconTile item={item} />
-                    <div className="min-w-0 flex-1">
-                      <h3 className="truncate text-[20px] font-bold text-[#F5EBCB]">
-                        {bnName(item)}
-                      </h3>
-                      <p className="text-[14px] font-medium text-[#A9B7C2]">
-                        {isBank(item) ? "ব্যাংক অ্যাকাউন্ট" : "মোবাইল ব্যাংকিং"}
-                      </p>
-                    </div>
-                  </div>
+            <article className="rounded-3xl border-2 border-[#C9A24B]/40 bg-[#0D2538] p-4 shadow-[0_10px_40px_-20px_rgba(0,0,0,0.8)] sm:p-5">
+              <div className="divide-y divide-[#C9A24B]/20">
+                {paymentMethods.map((item) => {
+                  const k = keyOf(item);
+                  return (
+                    <div key={item.id} className="py-3.5 first:pt-0 last:pb-0">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white p-2 shadow-[0_6px_16px_-6px_rgba(0,0,0,0.6)]">
+                          <img
+                            src={LOGOS[k]}
+                            alt={item.method_name}
+                            className="h-full w-full object-contain"
+                          />
+                        </span>
+                        <div className="min-w-0">
+                          <h3 className="text-[20px] font-bold text-[#F5EBCB]">{BN_NAMES[k]}</h3>
+                          <p className="whitespace-nowrap font-mono text-[20px] font-bold tracking-wide text-[#F2D98F]">
+                            {item.account_number || "—"}
+                          </p>
+                        </div>
+                      </div>
 
-                  <div className="mt-3.5 flex items-center justify-between gap-2 rounded-2xl border border-[#C9A24B]/30 bg-[#081A2B] px-4 py-3">
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-medium text-[#A9B7C2]">
-                        {isBank(item) ? "অ্যাকাউন্ট নম্বর" : "নম্বর"}
-                      </p>
-                      <p className="truncate font-mono text-[20px] font-bold tracking-wider text-[#F2D98F]">
-                        {item.account_number || "—"}
-                      </p>
+                      {item.description && (
+                        <p className="mt-2.5 whitespace-pre-line text-[15px] font-medium leading-[1.75] text-[#E6DCC0]">
+                          {item.description}
+                        </p>
+                      )}
                     </div>
-                    {item.account_number && (
-                      <button
-                        type="button"
-                        onClick={() => copy(item.id, item.account_number)}
-                        className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[14px] font-bold transition hover:brightness-105 active:scale-95 ${GOLD_GRAD}`}
-                      >
-                        {copiedId === item.id ? <CheckIcon /> : <CopyIcon />}
-                        {copiedId === item.id ? "কপি হয়েছে" : "কপি"}
-                      </button>
-                    )}
-                  </div>
-
-                  {item.description && (
-                    <p className="mt-3 whitespace-pre-line text-[15px] font-medium leading-[1.75] text-[#E6DCC0]">
-                      {item.description}
-                    </p>
-                  )}
-                </article>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+            </article>
           )}
         </section>
 
