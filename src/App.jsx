@@ -10,6 +10,7 @@ import Documents from "./pages/Documents";
 import ChangePassword from "./pages/ChangePassword";
 import Others from "./pages/Others";
 import AdminPayment from "./pages/AdminPayment";
+import Staff from "./pages/Staff";
 import Userfulldetlise from "./components/Userfulldetlise";
 
 /* Layout */
@@ -118,6 +119,18 @@ function App() {
           <ProtectedRoute>
             <MainLayout>
               <Others />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ================= STAFF MANAGE (ADMIN) ================= */}
+      <Route
+        path="/staff"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <Staff />
             </MainLayout>
           </ProtectedRoute>
         }
