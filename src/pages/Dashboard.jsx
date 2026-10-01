@@ -1,209 +1,432 @@
-import React, { useState, useEffect } from "react";
+// src/pages/Dashboard.jsx
+import React, { useState, useEffect, useMemo } from "react";
 
 import BKash from "../assets/icons/BKash.png";
 import Nagad from "../assets/icons/Nagad.png";
 
+/* ================= STYLES ================= */
+
+const styles = `
+@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
+
+.db-root {
+  font-family: 'Hind Siliguri', 'Noto Sans Bengali', 'Kalpurush', system-ui, sans-serif;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  -webkit-tap-highlight-color: transparent;
+}
+.db-root h1, .db-root h2, .db-root h3, .db-root p, .db-root span, .db-root button {
+  letter-spacing: 0 !important;
+}
+@keyframes db-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.db-rise { animation: db-rise .35s ease-out both; }
+@keyframes db-pulse { 0%,100% { opacity: .55; } 50% { opacity: .25; } }
+.db-skel { animation: db-pulse 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .db-rise, .db-skel { animation: none; }
+}
+`;
+
+/* ===== THEME: dark navy blue + gold =====
+   page bg   #06121F   card #0D2538   deep #081A2B
+   cream     #F5EBCB   muted #A9B7C2
+   gold      #C9A24B   light gold #F2D98F
+*/
+
+// সাইডবার fixed — কনটেন্ট যেন তার নিচে না ঢোকে
+const OFFSET = "pt-[calc(56px+env(safe-area-inset-top,0px))] md:pt-0 md:pl-64";
+
+const HERO_BG = {
+  background:
+    "radial-gradient(700px 320px at 10% -30%, #1E5A74 0%, transparent 60%), linear-gradient(160deg, #0F3045 0%, #071826 70%)",
+};
+
+const GOLD_GRAD = "bg-gradient-to-b from-[#E8CB7E] via-[#C9A24B] to-[#B48A34] text-[#1B1405]";
+const GOLD_SHADOW =
+  "shadow-[0_10px_24px_-8px_rgba(201,162,75,0.7),inset_0_1px_0_rgba(255,255,255,0.5)]";
+
+/* ================= ICONS ================= */
+
+const Svg = ({ children, className = "w-6 h-6" }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.9"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden="true"
+  >
+    {children}
+  </svg>
+);
+
+const BankIcon = () => (
+  <Svg>
+    <path d="M3 10l9-6 9 6" />
+    <path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8" />
+    <path d="M3 21h18" />
+  </Svg>
+);
+const RocketIcon = () => (
+  <Svg>
+    <path d="M5 15c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2.1-.1-2.9A2.2 2.2 0 0 0 5 15z" />
+    <path d="M12 15l-3-3a22 22 0 0 1 2-4 12.9 12.9 0 0 1 11-6c0 2.7-.8 7.5-6 11a22 22 0 0 1-4 2z" />
+    <path d="M9 12H4s.6-3 2-4c1.6-1.1 5 0 5 0M12 15v5s3-.6 4-2c1.1-1.6 0-5 0-5" />
+  </Svg>
+);
+const WalletIcon = () => (
+  <Svg>
+    <rect x="2" y="5" width="20" height="14" rx="2.5" />
+    <path d="M2 10h20M6 15h4" />
+  </Svg>
+);
+const CopyIcon = () => (
+  <Svg className="w-4 h-4">
+    <rect x="9" y="9" width="12" height="12" rx="2" />
+    <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+  </Svg>
+);
+const CheckIcon = () => (
+  <Svg className="w-4 h-4">
+    <path d="M5 12.5l4.5 4.5L19 7.5" />
+  </Svg>
+);
+const CalcIcon = () => (
+  <Svg>
+    <rect x="4" y="2.5" width="16" height="19" rx="2.5" />
+    <path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01" />
+  </Svg>
+);
+
+/* ================= HELPERS ================= */
+
+const API_ACTIVE =
+  "https://loan.microfinancedevelopmentprojectbangladesh.com/paymentmethod/active";
+
+const BN_NAMES = { bkash: "বিকাশ", nagad: "নগদ", rocket: "রকেট" };
+
+const keyOf = (item) => (item.method_name || "").trim().toLowerCase();
+
+const isBank = (item) =>
+  `${item.method_type || ""} ${item.method_name || ""}`.toLowerCase().includes("bank") ||
+  `${item.method_name || ""}`.includes("ব্যাংক");
+
+const bnName = (item) => BN_NAMES[keyOf(item)] || item.method_name;
+
+const toBn = (n) =>
+  String(n).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[d]);
+
+const formatAmount = (value) => {
+  if (value >= 100000) return `${toBn(value / 100000)} লক্ষ`;
+  if (value >= 1000) return `${toBn(value / 1000)} হাজার`;
+  return toBn(value);
+};
+
+const fmt = (n) => Math.round(n).toLocaleString("en-US");
+
+const MONTH_OPTIONS = [12, 18, 24, 36, 48, 60, 72, 84, 96, 108, 120];
+
+const AMOUNT_OPTIONS = [
+  50000, 100000, 150000, 200000, 300000, 400000,
+  500000, 600000, 700000, 800000, 900000,
+  1000000, 1500000, 2000000, 2500000, 3000000,
+];
+
+const INTEREST_RATE = 2.4;
+
+/* ================= MAIN ================= */
+
 const Dashboard = () => {
   const [months, setMonths] = useState(null);
   const [amount, setAmount] = useState(null);
+
   const [paymentMethods, setPaymentMethods] = useState([]);
+  const [payLoading, setPayLoading] = useState(true);
+  const [payError, setPayError] = useState(false);
+  const [copiedId, setCopiedId] = useState(null);
 
-  const interestRate = 2.4;
-
-  const [result, setResult] = useState({
-    monthly: 0,
-    total: 0,
-  });
-
-  /* ================= FETCH PAYMENT ================= */
+  /* ---------- fetch active payment numbers ---------- */
   useEffect(() => {
-    fetchPaymentMethods();
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch(API_ACTIVE);
+        if (!res.ok) throw new Error("bad status");
+        const data = await res.json();
+        if (!alive) return;
+        // অ্যাডমিন যা যা সক্রিয় করেছে (বিকাশ, নগদ, রকেট, ব্যাংক) সবই দেখাবে
+        setPaymentMethods(Array.isArray(data) ? data : []);
+        setPayError(false);
+      } catch (err) {
+        if (alive) setPayError(true);
+      } finally {
+        if (alive) setPayLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  const fetchPaymentMethods = async () => {
+  const copy = async (id, text) => {
     try {
-      const res = await fetch(
-        "https://loan.microfinancedevelopmentprojectbangladesh.com/paymentmethod/active"
-      );
-      const data = await res.json();
-
-      // ✅ ONLY BKASH + NAGAD
-      const filtered = data.filter((item) => {
-        const name = item.method_name?.toLowerCase();
-        return name === "bkash" || name === "nagad";
-      });
-
-      setPaymentMethods(filtered);
-    } catch (err) {
-      console.log("Payment method load error", err);
-    }
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 1500);
+    } catch {}
   };
 
-  /* ================= CALC ================= */
-  useEffect(() => {
-    if (!months || !amount) {
-      setResult({ monthly: 0, total: 0 });
-      return;
-    }
-    calculateLoan();
+  /* ---------- calculation ---------- */
+  const result = useMemo(() => {
+    if (!months || !amount) return null;
+    const yearlyInterest = (amount * INTEREST_RATE) / 100;
+    const totalInterest = (yearlyInterest / 12) * months;
+    const totalPayable = amount + totalInterest;
+    return {
+      monthly: totalPayable / months,
+      total: totalPayable,
+      interest: totalInterest,
+    };
   }, [months, amount]);
 
-  const calculateLoan = () => {
-    const yearlyInterest = (amount * interestRate) / 100;
-    const totalInterest = (yearlyInterest / 12) * months;
-
-    const totalPayable = amount + totalInterest;
-    const monthlyInstallment = totalPayable / months;
-
-    setResult({
-      monthly: Math.round(monthlyInstallment),
-      total: Math.round(totalPayable),
-    });
-  };
-
-  const monthOptions = [12, 18, 24, 36, 48, 60, 72, 84, 96, 108, 120];
-
-  const amountOptions = [
-    50000,100000,150000,200000,300000,400000,
-    500000,600000,700000,800000,900000,
-    1000000,1500000,2000000,2500000,3000000,
-  ];
-
-  const formatAmount = (value) => {
-    if (value >= 100000) return `${value / 100000} লক্ষ`;
-    if (value >= 1000) return `${value / 1000} হাজার`;
-    return value;
-  };
-
-  const getIcon = (name) => {
-    const m = name?.toLowerCase();
-
-    if (m === "bkash") return BKash;
-    if (m === "nagad") return Nagad;
-
-    return null;
+  /* ---------- payment icon tile ---------- */
+  const IconTile = ({ item }) => {
+    const k = keyOf(item);
+    if (k === "bkash" || k === "nagad") {
+      return (
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white p-2 shadow-[0_6px_16px_-6px_rgba(0,0,0,0.6)]">
+          <img
+            src={k === "bkash" ? BKash : Nagad}
+            alt={item.method_name}
+            className="h-full w-full object-contain"
+          />
+        </span>
+      );
+    }
+    return (
+      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#C9A24B]/50 bg-[#16384F] text-[#F2D98F]">
+        {k === "rocket" ? <RocketIcon /> : isBank(item) ? <BankIcon /> : <WalletIcon />}
+      </span>
+    );
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4 md:ml-64 md:p-6">
+    <div className={`db-root min-h-screen bg-[#06121F] pb-16 text-[#F5EBCB] ${OFFSET}`}>
+      <style>{styles}</style>
 
-      {/* ================= PAYMENT METHODS ================= */}
-      <div className="mb-6">
-        <h2 className="text-lg font-bold mb-3">
-          💳 এজেন্ট পেমেন্ট নম্বর
-        </h2>
+      <div className="mx-auto max-w-4xl space-y-6 px-4 pt-5 md:px-6 md:pt-8">
+        {/* ================= HERO ================= */}
+        <section
+          className="db-rise relative overflow-hidden rounded-3xl border border-[#C9A24B]/50 p-5 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.9)] sm:p-6"
+          style={HERO_BG}
+        >
+          <span className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full border border-[#C9A24B]/25" />
+          <span className="pointer-events-none absolute -right-2 -top-2 h-24 w-24 rounded-full border border-[#C9A24B]/20" />
+          <p className="text-[15px] font-medium text-[#F2D98F]/90">স্বাগতম</p>
+          <h1 className="mt-0.5 text-[26px] font-bold leading-tight text-white sm:text-[30px]">
+            ঋণ ড্যাশবোর্ড
+          </h1>
+          <p className="mt-1.5 max-w-md text-[16px] font-medium text-white/80">
+            এজেন্টের পেমেন্ট নম্বর দেখুন এবং মাস ও টাকা বেছে কিস্তির হিসাব জেনে নিন।
+          </p>
+        </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* ================= PAYMENT NUMBERS ================= */}
+        <section className="db-rise" style={{ animationDelay: "60ms" }}>
+          <div className="mb-3 flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#C9A24B]/15 text-[#F2D98F]">
+              <WalletIcon />
+            </span>
+            <h2 className="text-[20px] font-bold text-[#F2D98F]">এজেন্ট পেমেন্ট নম্বর</h2>
+          </div>
 
-          {paymentMethods.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg"
-            >
-
-              <img
-                src={getIcon(item.method_name)}
-                className="w-12 h-12 object-contain"
-                alt={item.method_name}
-              />
-
-              <div>
-                <p className="font-bold capitalize">
-                  {item.method_name === "bkash"
-                    ? "বিকাশ"
-                    : item.method_name === "nagad"
-                    ? "নগদ"
-                    : item.method_name}
-                </p>
-
-                <p className="text-sm opacity-80">
-                  {item.account_number}
-                </p>
-              </div>
-
+          {/* loading skeleton */}
+          {payLoading && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[0, 1].map((i) => (
+                <div
+                  key={i}
+                  className="db-skel h-[118px] rounded-3xl border border-[#C9A24B]/20 bg-[#0D2538]"
+                />
+              ))}
             </div>
-          ))}
-
-        </div>
-      </div>
-
-      {/* ================= LOAN ================= */}
-      <div className="space-y-6">
-
-        {/* MONTH */}
-        <div className="bg-white/5 p-5 rounded-2xl border border-white/10">
-          <h2 className="font-bold mb-3">মাস নির্বাচন</h2>
-
-          <div className="flex flex-wrap gap-2">
-            {monthOptions.map((m) => (
-              <button
-                key={m}
-                onClick={() => setMonths(m)}
-                className={`px-3 py-2 rounded-lg border ${
-                  months === m ? "bg-blue-600" : "bg-white/10"
-                }`}
-              >
-                {m} মাস
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* AMOUNT */}
-        <div className="bg-white/5 p-5 rounded-2xl border border-white/10">
-          <h2 className="font-bold mb-3">টাকা নির্বাচন</h2>
-
-          <div className="flex flex-wrap gap-2">
-            {amountOptions.map((a) => (
-              <button
-                key={a}
-                onClick={() => setAmount(a)}
-                className={`px-3 py-2 rounded-lg border ${
-                  amount === a ? "bg-blue-600" : "bg-white/10"
-                }`}
-              >
-                {formatAmount(a)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* RESULT */}
-        <div className="bg-gradient-to-br from-blue-600/30 to-indigo-900/40 p-5 rounded-2xl border border-blue-500/30">
-          <h2 className="font-bold mb-3">ঋণের হিসাব</h2>
-
-          {months && amount ? (
-            <>
-              <p>💸 সুদ: <b>{interestRate}%</b></p>
-              <p>📅 সময়: <b>{months} মাস</b></p>
-              <p>💰 টাকা: <b>{amount.toLocaleString()}</b></p>
-
-              <hr className="my-3 opacity-30" />
-
-              <p className="text-lg">
-                📆 মাসিক কিস্তি:{" "}
-                <b className="text-green-300">
-                  {result.monthly.toLocaleString()}
-                </b>
-              </p>
-
-              <p className="text-lg">
-                💵 মোট:{" "}
-                <b className="text-yellow-300">
-                  {result.total.toLocaleString()}
-                </b>
-              </p>
-            </>
-          ) : (
-            <p className="opacity-70">
-              👉 আগে মাস ও টাকা নির্বাচন করুন
-            </p>
           )}
-        </div>
 
+          {/* error */}
+          {!payLoading && payError && (
+            <div className="rounded-2xl border-2 border-[#EDA9A9] bg-[#FDECEC] p-4 text-[16px] font-bold text-[#961F1F]">
+              পেমেন্ট নম্বর লোড করা যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।
+            </div>
+          )}
+
+          {/* empty */}
+          {!payLoading && !payError && paymentMethods.length === 0 && (
+            <div className="rounded-2xl border-2 border-[#C9A24B]/50 bg-[#0D2538] p-5 text-center text-[16px] font-medium text-[#D8CFB4]">
+              এখনো কোনো পেমেন্ট নম্বর যোগ করা হয়নি।
+            </div>
+          )}
+
+          {/* cards */}
+          {!payLoading && !payError && paymentMethods.length > 0 && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {paymentMethods.map((item) => (
+                <article
+                  key={item.id}
+                  className="rounded-3xl border-2 border-[#C9A24B]/40 bg-[#0D2538] p-4 shadow-[0_10px_40px_-20px_rgba(0,0,0,0.8)]"
+                >
+                  <div className="flex items-center gap-3">
+                    <IconTile item={item} />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-[20px] font-bold text-[#F5EBCB]">
+                        {bnName(item)}
+                      </h3>
+                      <p className="text-[14px] font-medium text-[#A9B7C2]">
+                        {isBank(item) ? "ব্যাংক অ্যাকাউন্ট" : "মোবাইল ব্যাংকিং"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3.5 flex items-center justify-between gap-2 rounded-2xl border border-[#C9A24B]/30 bg-[#081A2B] px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-medium text-[#A9B7C2]">
+                        {isBank(item) ? "অ্যাকাউন্ট নম্বর" : "নম্বর"}
+                      </p>
+                      <p className="truncate font-mono text-[20px] font-bold tracking-wider text-[#F2D98F]">
+                        {item.account_number || "—"}
+                      </p>
+                    </div>
+                    {item.account_number && (
+                      <button
+                        type="button"
+                        onClick={() => copy(item.id, item.account_number)}
+                        className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[14px] font-bold transition hover:brightness-105 active:scale-95 ${GOLD_GRAD}`}
+                      >
+                        {copiedId === item.id ? <CheckIcon /> : <CopyIcon />}
+                        {copiedId === item.id ? "কপি হয়েছে" : "কপি"}
+                      </button>
+                    )}
+                  </div>
+
+                  {item.description && (
+                    <p className="mt-3 whitespace-pre-line text-[15px] font-medium leading-[1.75] text-[#E6DCC0]">
+                      {item.description}
+                    </p>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ================= CALCULATOR ================= */}
+        <section className="db-rise space-y-5" style={{ animationDelay: "120ms" }}>
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#C9A24B]/15 text-[#F2D98F]">
+              <CalcIcon />
+            </span>
+            <h2 className="text-[20px] font-bold text-[#F2D98F]">কিস্তির হিসাব</h2>
+          </div>
+
+          {/* MONTH */}
+          <div className="rounded-3xl border-2 border-[#C9A24B]/30 bg-[#0D2538] p-4 sm:p-5">
+            <h3 className="mb-3 text-[17px] font-bold text-[#F5EBCB]">মাস নির্বাচন</h3>
+            <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+              {MONTH_OPTIONS.map((m) => {
+                const on = months === m;
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setMonths(m)}
+                    aria-pressed={on}
+                    className={`min-h-[48px] rounded-xl border-2 px-2 text-[16px] font-bold transition active:scale-95 ${
+                      on
+                        ? `border-transparent ${GOLD_GRAD} ${GOLD_SHADOW}`
+                        : "border-[#C9A24B]/30 bg-[#0A1D2E] text-[#F5EBCB] hover:border-[#C9A24B]"
+                    }`}
+                  >
+                    {toBn(m)} মাস
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* AMOUNT */}
+          <div className="rounded-3xl border-2 border-[#C9A24B]/30 bg-[#0D2538] p-4 sm:p-5">
+            <h3 className="mb-3 text-[17px] font-bold text-[#F5EBCB]">টাকা নির্বাচন</h3>
+            <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+              {AMOUNT_OPTIONS.map((a) => {
+                const on = amount === a;
+                return (
+                  <button
+                    key={a}
+                    type="button"
+                    onClick={() => setAmount(a)}
+                    aria-pressed={on}
+                    className={`min-h-[48px] rounded-xl border-2 px-2 text-[16px] font-bold transition active:scale-95 ${
+                      on
+                        ? `border-transparent ${GOLD_GRAD} ${GOLD_SHADOW}`
+                        : "border-[#C9A24B]/30 bg-[#0A1D2E] text-[#F5EBCB] hover:border-[#C9A24B]"
+                    }`}
+                  >
+                    {formatAmount(a)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* RESULT */}
+          <div
+            className="overflow-hidden rounded-3xl border-2 border-[#C9A24B]/60 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.9)]"
+            style={HERO_BG}
+          >
+            <div className="p-5 sm:p-6">
+              <h3 className="text-[17px] font-bold text-[#F2D98F]">ঋণের হিসাব</h3>
+
+              {result ? (
+                <>
+                  <div className="mt-3 rounded-2xl border border-[#C9A24B]/40 bg-black/25 p-4 text-center">
+                    <p className="text-[15px] font-medium text-white/80">মাসিক কিস্তি</p>
+                    <p className="text-[38px] font-bold leading-tight text-[#F2D98F] sm:text-[44px]">
+                      ৳ {fmt(result.monthly)}
+                    </p>
+                  </div>
+
+                  <dl className="mt-4 divide-y divide-white/10 text-[16px]">
+                    <Row label="ঋণের পরিমাণ" value={`৳ ${fmt(amount)}`} />
+                    <Row label="সময়" value={`${toBn(months)} মাস`} />
+                    <Row label="বার্ষিক সুদ" value={`${toBn(INTEREST_RATE)}%`} />
+                    <Row label="মোট সুদ" value={`৳ ${fmt(result.interest)}`} />
+                    <Row label="মোট পরিশোধ" value={`৳ ${fmt(result.total)}`} strong />
+                  </dl>
+                </>
+              ) : (
+                <p className="mt-3 rounded-2xl border border-dashed border-[#C9A24B]/40 p-4 text-center text-[16px] font-medium text-white/75">
+                  আগে মাস ও টাকা নির্বাচন করুন
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
 };
+
+/* ================= SMALL PARTS ================= */
+
+const Row = ({ label, value, strong }) => (
+  <div className="flex items-center justify-between gap-3 py-2.5">
+    <dt className="font-medium text-white/80">{label}</dt>
+    <dd className={`font-bold ${strong ? "text-[20px] text-[#F2D98F]" : "text-white"}`}>
+      {value}
+    </dd>
+  </div>
+);
 
 export default Dashboard;
