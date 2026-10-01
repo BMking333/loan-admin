@@ -1016,11 +1016,20 @@ const ShotHistoryCard = ({ loan }) => {
               </p>
             )}
 
-            {/* তথ্য */}
+            {/* শট তথ্য (অ্যাডমিনের দেওয়া) */}
             {h.info ? (
-              <p className="mt-2.5 whitespace-pre-line rounded-xl bg-[#0D2538] px-3 py-2.5 text-[14px] leading-relaxed text-[#F5EBCB]">
-                {h.info}
-              </p>
+              <div className="mt-2.5 rounded-xl bg-[#0D2538] px-3 py-2.5">
+                <p className="mb-1 text-[12px] font-semibold text-[#F2D98F]/80">শট তথ্য</p>
+                <p className="whitespace-pre-line text-[14px] leading-relaxed text-[#F5EBCB]">{h.info}</p>
+              </div>
+            ) : null}
+
+            {/* গ্রাহকের নোট (থাকলে) */}
+            {h.user_note ? (
+              <div className="mt-2 rounded-xl bg-[#0D2538] px-3 py-2.5">
+                <p className="mb-1 text-[12px] font-semibold text-[#F2D98F]/80">গ্রাহকের নোট</p>
+                <p className="whitespace-pre-line text-[14px] leading-relaxed text-[#F5EBCB]">{h.user_note}</p>
+              </div>
             ) : null}
 
             {/* স্ক্রিনশট */}
