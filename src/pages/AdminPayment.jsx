@@ -427,7 +427,7 @@ const AdminPayment = () => {
       <style>{styles}</style>
 
       {/* ===== TOP BAR ===== */}
-      <header className="sticky top-0 z-40 border-b border-[#C9A24B]/40 bg-[#040D16] text-white shadow-lg">
+      <header className="sticky top-[calc(56px+env(safe-area-inset-top,0px))] z-30 border-b md:top-0 border-[#C9A24B]/40 bg-[#040D16] text-white shadow-lg">
         <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3.5">
           <button
             onClick={() => navigate(-1)}
