@@ -21,8 +21,18 @@ const styles = `
 .ap-pop { animation: ap-pop .18s ease-out; }
 `;
 
+/* ===== THEME: dark navy blue + gold =====
+   page bg      #06121F
+   card bg      #0D2538
+   field bg     #0A1D2E
+   cream text   #F5EBCB
+   muted text   #A9B7C2
+   gold         #C9A24B
+   light gold   #F2D98F
+*/
+
 const NAVY_BG = {
-  background: "radial-gradient(900px 420px at 15% -20%, #17495a 0%, #0A1F2E 65%)",
+  background: "radial-gradient(900px 420px at 15% -20%, #1B4F66 0%, #071826 65%)",
 };
 
 const GOLD_BTN =
@@ -32,13 +42,16 @@ const GOLD_BTN =
   "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#C9A24B]/40";
 
 const INK_BTN =
-  "bg-[#0A1F2E] text-white hover:bg-[#123244] active:translate-y-px " +
-  "shadow-[0_10px_24px_-10px_rgba(10,31,46,0.8)] " +
-  "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#0A1F2E]/30";
+  "bg-[#16384F] text-[#F2D98F] border-2 border-[#C9A24B]/60 hover:bg-[#1B455F] active:translate-y-px " +
+  "shadow-[0_10px_24px_-10px_rgba(0,0,0,0.8)] " +
+  "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#C9A24B]/40";
+
+const OUTLINE_GOLD_BTN =
+  "border-2 border-[#C9A24B] text-[#F2D98F] hover:bg-[#C9A24B] hover:text-[#1B1405] active:scale-95";
 
 const INPUT =
-  "w-full rounded-xl border-2 border-[#D9D2BA] bg-white px-4 py-3 text-[17px] font-medium text-[#0A1F2E] " +
-  "placeholder:text-[#8A939A] focus:border-[#C9A24B] focus:outline-none focus:ring-4 focus:ring-[#C9A24B]/25";
+  "w-full rounded-xl border-2 border-[#C9A24B]/40 bg-[#0A1D2E] px-4 py-3 text-[17px] font-medium text-[#F5EBCB] " +
+  "placeholder:text-[#7F90A0] focus:border-[#C9A24B] focus:outline-none focus:ring-4 focus:ring-[#C9A24B]/25";
 
 /* ================= ICONS ================= */
 
@@ -323,13 +336,13 @@ const AdminPayment = () => {
   /* ================= LOADING ================= */
   if (loading) {
     return (
-      <div className="ap-root flex min-h-screen flex-col items-center justify-center gap-4 bg-[#FAF8F3]">
+      <div className="ap-root flex min-h-screen flex-col items-center justify-center gap-4 bg-[#06121F]">
         <style>{styles}</style>
         <svg className="h-10 w-10 animate-spin text-[#C9A24B]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
           <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
         </svg>
-        <p className="text-[18px] font-bold text-[#0A1F2E]">লোড হচ্ছে...</p>
+        <p className="text-[18px] font-bold text-[#F2D98F]">লোড হচ্ছে...</p>
       </div>
     );
   }
@@ -337,7 +350,7 @@ const AdminPayment = () => {
   /* ================= FORBIDDEN ================= */
   if (forbidden) {
     return (
-      <div className="ap-root flex min-h-screen items-center justify-center bg-[#FAF8F3] px-4">
+      <div className="ap-root flex min-h-screen items-center justify-center bg-[#06121F] px-4">
         <style>{styles}</style>
         <div className="w-full max-w-md rounded-2xl border-2 border-[#EDA9A9] bg-[#FDECEC] p-6 text-center">
           <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#F8CFCF] text-[#B92A2A]">
@@ -349,7 +362,7 @@ const AdminPayment = () => {
           </p>
           <button
             onClick={() => navigate("/dashboard", { replace: true })}
-            className={`mt-5 w-full rounded-xl px-6 py-3.5 text-[17px] font-bold transition ${INK_BTN}`}
+            className={`mt-5 w-full rounded-xl px-6 py-3.5 text-[17px] font-bold transition ${GOLD_BTN}`}
           >
             হোমে ফিরে যান
           </button>
@@ -359,20 +372,20 @@ const AdminPayment = () => {
   }
 
   return (
-    <div className="ap-root min-h-screen bg-[#FAF8F3] pb-16 text-[#0A1F2E]">
+    <div className="ap-root min-h-screen bg-[#06121F] pb-16 text-[#F5EBCB]">
       <style>{styles}</style>
 
       {/* ===== TOP BAR ===== */}
-      <header className="sticky top-0 z-40 border-b border-[#C9A24B]/30 bg-[#0A1F2E] text-white shadow-lg">
+      <header className="sticky top-0 z-40 border-b border-[#C9A24B]/40 bg-[#040D16] text-white shadow-lg">
         <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3.5">
           <button
             onClick={() => navigate(-1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20 active:scale-95"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#C9A24B]/15 text-[#F2D98F] transition hover:bg-[#C9A24B]/30 active:scale-95"
             aria-label="পেছনে যান"
           >
             <BackIcon />
           </button>
-          <h1 className="flex-1 text-[21px] font-bold">পেমেন্ট মেথড ম্যানেজ</h1>
+          <h1 className="flex-1 text-[21px] font-bold text-[#F2D98F]">পেমেন্ট মেথড ম্যানেজ</h1>
           <button
             onClick={openAdd}
             className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-[16px] font-bold transition ${GOLD_BTN}`}
@@ -386,7 +399,7 @@ const AdminPayment = () => {
       <main className="mx-auto mt-6 max-w-4xl space-y-5 px-4">
         {/* ===== SUMMARY ===== */}
         <section
-          className="grid grid-cols-3 gap-3 rounded-3xl border border-[#C9A24B]/40 p-5 text-white shadow-[0_24px_60px_-24px_rgba(10,31,46,0.8)]"
+          className="grid grid-cols-3 gap-3 rounded-3xl border border-[#C9A24B]/50 p-5 text-white shadow-[0_24px_60px_-24px_rgba(0,0,0,0.9)]"
           style={NAVY_BG}
         >
           <Stat label="মোট" value={total} />
@@ -396,14 +409,14 @@ const AdminPayment = () => {
 
         {/* ===== EMPTY ===== */}
         {total === 0 && (
-          <section className="rounded-2xl border-2 border-[#E6CB7A] bg-[#FFF6DC] p-6 text-center">
-            <h3 className="text-[19px] font-bold text-[#4A3608]">কোনো পেমেন্ট মেথড নেই</h3>
-            <p className="mt-1 text-[16px] font-medium text-[#4F3A10]">
+          <section className="rounded-2xl border-2 border-[#C9A24B]/60 bg-[#0D2538] p-6 text-center">
+            <h3 className="text-[19px] font-bold text-[#F2D98F]">কোনো পেমেন্ট মেথড নেই</h3>
+            <p className="mt-1 text-[16px] font-medium text-[#D8CFB4]">
               শুরু করতে নিচের বাটনে চাপ দিয়ে প্রথম মেথড যোগ করুন।
             </p>
             <button
               onClick={openAdd}
-              className={`mt-4 rounded-xl px-6 py-3.5 text-[17px] font-bold transition ${INK_BTN}`}
+              className={`mt-4 rounded-xl px-6 py-3.5 text-[17px] font-bold transition ${GOLD_BTN}`}
             >
               নতুন মেথড যোগ করুন
             </button>
@@ -415,17 +428,17 @@ const AdminPayment = () => {
           {items.map((m) => (
             <article
               key={m.id}
-              className={`rounded-3xl border-2 bg-white p-5 shadow-[0_10px_40px_-20px_rgba(10,31,46,0.25)] transition ${
-                m.is_active ? "border-[#E0D7BC]" : "border-[#D9DCDF] opacity-80"
+              className={`rounded-3xl border-2 bg-[#0D2538] p-5 shadow-[0_10px_40px_-20px_rgba(0,0,0,0.8)] transition ${
+                m.is_active ? "border-[#C9A24B]/45" : "border-[#3A4A57] opacity-80"
               }`}
             >
               <div className="flex items-start gap-3">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#0A1F2E] text-[#F2D98F]">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#C9A24B]/50 bg-[#16384F] text-[#F2D98F]">
                   {isBankType(m) ? <BankIcon /> : <WalletIcon />}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <h3 className="truncate text-[20px] font-bold">{m.method_name}</h3>
-                  <p className="text-[15px] font-medium text-[#5B6770]">{m.method_type}</p>
+                  <h3 className="truncate text-[20px] font-bold text-[#F5EBCB]">{m.method_name}</h3>
+                  <p className="text-[15px] font-medium text-[#A9B7C2]">{m.method_type}</p>
                 </div>
                 <span
                   className={`shrink-0 rounded-full px-3 py-1 text-[14px] font-bold ${
@@ -438,10 +451,10 @@ const AdminPayment = () => {
                 </span>
               </div>
 
-              <div className="mt-4 flex items-center justify-between gap-2 rounded-2xl border border-[#E6DFC9] bg-[#FAF8F3] px-4 py-3">
+              <div className="mt-4 flex items-center justify-between gap-2 rounded-2xl border border-[#C9A24B]/30 bg-[#081A2B] px-4 py-3">
                 <div className="min-w-0">
-                  <p className="text-[14px] font-medium text-[#5B6770]">অ্যাকাউন্ট নম্বর</p>
-                  <p className="truncate font-mono text-[19px] font-bold tracking-wider">
+                  <p className="text-[14px] font-medium text-[#A9B7C2]">অ্যাকাউন্ট নম্বর</p>
+                  <p className="truncate font-mono text-[19px] font-bold tracking-wider text-[#F2D98F]">
                     {m.account_number || "—"}
                   </p>
                 </div>
@@ -449,7 +462,7 @@ const AdminPayment = () => {
                   <button
                     type="button"
                     onClick={() => copy(m.id, m.account_number)}
-                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#0A1F2E] px-3.5 py-2 text-[14px] font-bold text-white transition hover:bg-[#123244] active:scale-95"
+                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-b from-[#E8CB7E] to-[#B48A34] px-3.5 py-2 text-[14px] font-bold text-[#1B1405] transition hover:brightness-105 active:scale-95"
                   >
                     <CopyIcon />
                     {copiedId === m.id ? "কপি হয়েছে" : "কপি"}
@@ -458,12 +471,12 @@ const AdminPayment = () => {
               </div>
 
               {m.description && (
-                <p className="mt-3 whitespace-pre-line text-[16px] font-medium leading-[1.8] text-[#1F2A33]">
+                <p className="mt-3 whitespace-pre-line text-[16px] font-medium leading-[1.8] text-[#E6DCC0]">
                   {m.description}
                 </p>
               )}
 
-              <div className="mt-4 flex items-center justify-between gap-2 border-t border-[#EFEAD8] pt-4">
+              <div className="mt-4 flex items-center justify-between gap-2 border-t border-[#C9A24B]/25 pt-4">
                 {/* toggle */}
                 <button
                   type="button"
@@ -474,7 +487,7 @@ const AdminPayment = () => {
                 >
                   <span
                     className={`relative h-7 w-12 rounded-full transition-colors ${
-                      m.is_active ? "bg-[#1F9D6B]" : "bg-[#B9C0C6]"
+                      m.is_active ? "bg-[#C9A24B]" : "bg-[#3A4A57]"
                     }`}
                   >
                     <span
@@ -483,7 +496,7 @@ const AdminPayment = () => {
                       }`}
                     />
                   </span>
-                  <span className="text-[15px] font-bold">
+                  <span className="text-[15px] font-bold text-[#F5EBCB]">
                     {m.is_active ? "চালু" : "বন্ধ"}
                   </span>
                 </button>
@@ -492,7 +505,7 @@ const AdminPayment = () => {
                   <button
                     type="button"
                     onClick={() => openEdit(m)}
-                    className="flex items-center gap-1.5 rounded-full border-2 border-[#0A1F2E] px-3.5 py-1.5 text-[15px] font-bold text-[#0A1F2E] transition hover:bg-[#0A1F2E] hover:text-white active:scale-95"
+                    className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[15px] font-bold transition ${OUTLINE_GOLD_BTN}`}
                   >
                     <EditIcon />
                     এডিট
@@ -500,7 +513,7 @@ const AdminPayment = () => {
                   <button
                     type="button"
                     onClick={() => setDeleteTarget(m)}
-                    className="flex items-center gap-1.5 rounded-full border-2 border-[#D64545] px-3.5 py-1.5 text-[15px] font-bold text-[#B92A2A] transition hover:bg-[#D64545] hover:text-white active:scale-95"
+                    className="flex items-center gap-1.5 rounded-full border-2 border-[#D64545] px-3.5 py-1.5 text-[15px] font-bold text-[#FF8A8A] transition hover:bg-[#D64545] hover:text-white active:scale-95"
                   >
                     <TrashIcon />
                     মুছুন
@@ -515,22 +528,22 @@ const AdminPayment = () => {
       {/* ================= ADD / EDIT MODAL ================= */}
       {modalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-[#0A1F2E]/70 p-0 sm:items-center sm:p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 sm:items-center sm:p-4"
           onClick={closeModal}
         >
           <form
             onSubmit={submit}
             onClick={(e) => e.stopPropagation()}
-            className="ap-pop max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-[#FAF8F3] p-5 shadow-2xl sm:rounded-3xl sm:p-6"
+            className="ap-pop max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border-2 border-[#C9A24B]/50 bg-[#0B2236] p-5 shadow-2xl sm:rounded-3xl sm:p-6"
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-[21px] font-bold">
+              <h2 className="text-[21px] font-bold text-[#F2D98F]">
                 {editingId ? "মেথড এডিট করুন" : "নতুন পেমেন্ট মেথড"}
               </h2>
               <button
                 type="button"
                 onClick={closeModal}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0A1F2E]/10 transition hover:bg-[#0A1F2E]/20 active:scale-95"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[#C9A24B]/15 text-[#F2D98F] transition hover:bg-[#C9A24B]/30 active:scale-95"
                 aria-label="বন্ধ করুন"
               >
                 <CloseIcon />
@@ -584,12 +597,12 @@ const AdminPayment = () => {
                 <button
                   type="button"
                   onClick={() => setField("is_active", !form.is_active)}
-                  className="flex w-full items-center justify-between rounded-xl border-2 border-[#D9D2BA] bg-white px-4 py-3"
+                  className="flex w-full items-center justify-between rounded-xl border-2 border-[#C9A24B]/40 bg-[#0A1D2E] px-4 py-3"
                 >
-                  <span className="text-[17px] font-bold">সক্রিয় আছে</span>
+                  <span className="text-[17px] font-bold text-[#F5EBCB]">সক্রিয় আছে</span>
                   <span
                     className={`relative h-7 w-12 rounded-full transition-colors ${
-                      form.is_active ? "bg-[#1F9D6B]" : "bg-[#B9C0C6]"
+                      form.is_active ? "bg-[#C9A24B]" : "bg-[#3A4A57]"
                     }`}
                   >
                     <span
@@ -613,7 +626,7 @@ const AdminPayment = () => {
                 type="button"
                 onClick={closeModal}
                 disabled={saving}
-                className="rounded-xl border-2 border-[#0A1F2E] px-4 py-3.5 text-[17px] font-bold text-[#0A1F2E] transition hover:bg-[#0A1F2E]/5 active:translate-y-px disabled:opacity-60"
+                className="rounded-xl border-2 border-[#C9A24B] px-4 py-3.5 text-[17px] font-bold text-[#F2D98F] transition hover:bg-[#C9A24B]/10 active:translate-y-px disabled:opacity-60"
               >
                 বাতিল
               </button>
@@ -632,25 +645,25 @@ const AdminPayment = () => {
       {/* ================= DELETE CONFIRM ================= */}
       {deleteTarget && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A1F2E]/70 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
           onClick={() => !deleting && setDeleteTarget(null)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="ap-pop w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl"
+            className="ap-pop w-full max-w-sm rounded-3xl border-2 border-[#C9A24B]/50 bg-[#0B2236] p-6 text-center shadow-2xl"
           >
             <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#F8CFCF] text-[#B92A2A]">
               <AlertIcon />
             </span>
-            <h3 className="mt-3 text-[21px] font-bold">মুছে ফেলবেন?</h3>
-            <p className="mt-1 text-[17px] font-medium leading-[1.8] text-[#33404A]">
+            <h3 className="mt-3 text-[21px] font-bold text-[#F2D98F]">মুছে ফেলবেন?</h3>
+            <p className="mt-1 text-[17px] font-medium leading-[1.8] text-[#D8CFB4]">
               "{deleteTarget.method_name}" স্থায়ীভাবে মুছে যাবে। এটি আর ফেরত আনা যাবে না।
             </p>
             <div className="mt-5 grid grid-cols-2 gap-3">
               <button
                 onClick={() => setDeleteTarget(null)}
                 disabled={deleting}
-                className="rounded-xl border-2 border-[#0A1F2E] px-4 py-3 text-[17px] font-bold transition hover:bg-[#0A1F2E]/5 disabled:opacity-60"
+                className="rounded-xl border-2 border-[#C9A24B] px-4 py-3 text-[17px] font-bold text-[#F2D98F] transition hover:bg-[#C9A24B]/10 disabled:opacity-60"
               >
                 না
               </button>
@@ -672,7 +685,7 @@ const AdminPayment = () => {
           <div
             className={`ap-pop rounded-2xl px-5 py-3.5 text-center text-[17px] font-bold shadow-2xl ${
               toast.type === "success"
-                ? "bg-[#0C5A3B] text-white"
+                ? "border border-[#C9A24B] bg-[#0C5A3B] text-white"
                 : "bg-[#961F1F] text-white"
             }`}
           >
@@ -697,7 +710,7 @@ const Stat = ({ label, value, accent }) => (
 
 const Field = ({ label, children }) => (
   <label className="block">
-    <span className="mb-1.5 block text-[16px] font-bold text-[#0A1F2E]">{label}</span>
+    <span className="mb-1.5 block text-[16px] font-bold text-[#F2D98F]">{label}</span>
     {children}
   </label>
 );
