@@ -1,5 +1,6 @@
 // src/pages/Dashboard.jsx
 import React, { useState, useEffect, useMemo } from "react";
+import api from "../services/api";
 
 import BKash from "../assets/icons/BKash.png";
 import Nagad from "../assets/icons/Nagad.png";
@@ -42,6 +43,14 @@ const HERO_BG = {
     "radial-gradient(700px 320px at 10% -30%, #1E5A74 0%, transparent 60%), linear-gradient(160deg, #0F3045 0%, #071826 70%)",
 };
 
+// প্রিমিয়াম ব্যাংক কার্ডের ব্যাকগ্রাউন্ড
+const PREMIUM_CARD_BG = {
+  background:
+    "radial-gradient(420px 220px at 100% 0%, rgba(242,217,143,0.16) 0%, transparent 60%), " +
+    "radial-gradient(380px 260px at 0% 110%, rgba(30,90,116,0.55) 0%, transparent 65%), " +
+    "linear-gradient(145deg, #12344C 0%, #0A2133 55%, #061523 100%)",
+};
+
 const GOLD_GRAD = "bg-gradient-to-b from-[#E8CB7E] via-[#C9A24B] to-[#B48A34] text-[#1B1405]";
 const GOLD_SHADOW =
   "shadow-[0_10px_24px_-8px_rgba(201,162,75,0.7),inset_0_1px_0_rgba(255,255,255,0.5)]";
@@ -75,6 +84,39 @@ const CalcIcon = () => (
     <path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01" />
   </Svg>
 );
+const UsersIcon = () => (
+  <Svg>
+    <circle cx="9" cy="8" r="3.5" />
+    <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+    <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8" />
+  </Svg>
+);
+const ContactlessIcon = () => (
+  <Svg className="w-7 h-7">
+    <path d="M8.5 8.5a5 5 0 0 1 0 7" />
+    <path d="M12 6a8.5 8.5 0 0 1 0 12" />
+    <path d="M15.5 3.5a12 12 0 0 1 0 17" />
+  </Svg>
+);
+
+/* ===== সোনালি চিপ ===== */
+const ChipIcon = () => (
+  <svg viewBox="0 0 48 36" className="h-9 w-12" aria-hidden="true">
+    <defs>
+      <linearGradient id="chipGold" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#F2D98F" />
+        <stop offset="0.55" stopColor="#C9A24B" />
+        <stop offset="1" stopColor="#9B7424" />
+      </linearGradient>
+    </defs>
+    <rect x="1" y="1" width="46" height="34" rx="6" fill="url(#chipGold)" />
+    <g stroke="#7A5A17" strokeWidth="1" fill="none" opacity="0.7">
+      <path d="M1 12h14M1 24h14M33 12h14M33 24h14" />
+      <path d="M15 1v34M33 1v34" />
+      <rect x="15" y="12" width="18" height="12" rx="3" />
+    </g>
+  </svg>
+);
 
 /* ================= HELPERS ================= */
 
@@ -91,6 +133,12 @@ const keyOf = (item) => (item.method_name || "").trim().toLowerCase();
 const toBn = (n) =>
   String(n).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[d]);
 
+// 01712345678 -> 01712 345678
+const prettyNumber = (n) => {
+  const s = String(n || "").replace(/\s/g, "");
+  return /^\d{11}$/.test(s) ? `${s.slice(0, 5)} ${s.slice(5)}` : s || "—";
+};
+
 const formatAmount = (value) => {
   if (value >= 100000) return `${toBn(value / 100000)} লক্ষ`;
   if (value >= 1000) return `${toBn(value / 1000)} হাজার`;
@@ -98,6 +146,14 @@ const formatAmount = (value) => {
 };
 
 const fmt = (n) => Math.round(n).toLocaleString("en-US");
+
+const authHeaders = () => {
+  const token = localStorage.getItem("access") || localStorage.getItem("token");
+  return { Authorization: token ? `Bearer ${token}` : "" };
+};
+
+const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 
 const MONTH_OPTIONS = [12, 18, 24, 36, 48, 60, 72, 84, 96, 108, 120];
 
@@ -118,6 +174,12 @@ const Dashboard = () => {
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [payLoading, setPayLoading] = useState(true);
   const [payError, setPayError] = useState(false);
+
+  // রেজিস্ট্রেশন পরিসংখ্যান
+  const [users, setUsers] = useState([]);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState(false);
+  const [statsHidden, setStatsHidden] = useState(false); // অ্যাডমিন না হলে লুকানো থাকবে
 
   /* ---------- fetch active payment numbers ---------- */
   useEffect(() => {
@@ -146,6 +208,51 @@ const Dashboard = () => {
     };
   }, []);
 
+  /* ---------- fetch registrations ---------- */
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await api.get("/auth/admin/users", { headers: authHeaders() });
+        if (!alive) return;
+        setUsers(Array.isArray(res.data?.users) ? res.data.users : []);
+        setStatsError(false);
+      } catch (err) {
+        if (!alive) return;
+        const s = err?.response?.status;
+        if (s === 401 || s === 403) setStatsHidden(true);
+        else setStatsError(true);
+      } finally {
+        if (alive) setStatsLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  /* ---------- registration counts ---------- */
+  const stats = useMemo(() => {
+    const now = new Date();
+    const today = startOfDay(now);
+    const tomorrow = addDays(today, 1);
+    const yesterday = addDays(today, -1);
+    // সপ্তাহ শুরু শনিবার
+    const weekStart = addDays(today, -((today.getDay() + 1) % 7));
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const c = { today: 0, yesterday: 0, week: 0, month: 0 };
+    users.forEach((u) => {
+      const d = new Date(u.created_at);
+      if (!u.created_at || Number.isNaN(d.getTime())) return;
+      if (d >= today && d < tomorrow) c.today += 1;
+      if (d >= yesterday && d < today) c.yesterday += 1;
+      if (d >= weekStart && d < tomorrow) c.week += 1;
+      if (d >= monthStart && d < tomorrow) c.month += 1;
+    });
+    return c;
+  }, [users]);
+
   /* ---------- calculation ---------- */
   const result = useMemo(() => {
     if (!months || !amount) return null;
@@ -159,28 +266,59 @@ const Dashboard = () => {
     };
   }, [months, amount]);
 
+  const STAT_TILES = [
+    { label: "আজ", value: stats.today, accent: true },
+    { label: "গতকাল", value: stats.yesterday },
+    { label: "এই সপ্তাহে", value: stats.week },
+    { label: "এই মাসে", value: stats.month },
+  ];
+
   return (
     <div className={`db-root min-h-screen bg-[#06121F] pb-16 text-[#F5EBCB] ${OFFSET}`}>
       <style>{styles}</style>
 
       <div className="mx-auto max-w-4xl space-y-6 px-4 pt-5 md:px-6 md:pt-8">
-        {/* ================= HERO ================= */}
-        <section
-          className="db-rise relative overflow-hidden rounded-3xl border border-[#C9A24B]/50 p-5 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.9)] sm:p-6"
-          style={HERO_BG}
-        >
-          <span className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full border border-[#C9A24B]/25" />
-          <span className="pointer-events-none absolute -right-2 -top-2 h-24 w-24 rounded-full border border-[#C9A24B]/20" />
-          <p className="text-[15px] font-medium text-[#F2D98F]/90">স্বাগতম</p>
-          <h1 className="mt-0.5 text-[26px] font-bold leading-tight text-white sm:text-[30px]">
-            ঋণ ড্যাশবোর্ড
-          </h1>
-          <p className="mt-1.5 max-w-md text-[16px] font-medium text-white/80">
-            এজেন্টের পেমেন্ট নম্বর দেখুন এবং মাস ও টাকা বেছে কিস্তির হিসাব জেনে নিন।
-          </p>
-        </section>
+        {/* ================= REGISTRATIONS ================= */}
+        {!statsHidden && (
+          <section className="db-rise">
+            <div className="mb-3 flex items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#C9A24B]/15 text-[#F2D98F]">
+                <UsersIcon />
+              </span>
+              <h2 className="text-[20px] font-bold text-[#F2D98F]">রেজিস্ট্রেশন</h2>
+            </div>
 
-        {/* ================= PAYMENT NUMBERS ================= */}
+            {statsError ? (
+              <div className="rounded-2xl border-2 border-[#EDA9A9] bg-[#FDECEC] p-4 text-[16px] font-bold text-[#961F1F]">
+                রেজিস্ট্রেশনের তথ্য লোড করা যায়নি।
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {STAT_TILES.map((t) => (
+                  <div
+                    key={t.label}
+                    className={`rounded-2xl border-2 p-4 text-center ${
+                      t.accent
+                        ? "border-[#C9A24B]/70 bg-[#12344C]"
+                        : "border-[#C9A24B]/30 bg-[#0D2538]"
+                    }`}
+                  >
+                    <p className="text-[15px] font-medium text-[#A9B7C2]">{t.label}</p>
+                    {statsLoading ? (
+                      <div className="db-skel mx-auto mt-1 h-9 w-12 rounded-lg bg-[#16384F]" />
+                    ) : (
+                      <p className="text-[32px] font-bold leading-tight text-[#F2D98F]">
+                        {toBn(t.value)}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ================= PAYMENT NUMBERS (একটাই প্রিমিয়াম কার্ড) ================= */}
         <section className="db-rise" style={{ animationDelay: "60ms" }}>
           <div className="mb-3 flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#C9A24B]/15 text-[#F2D98F]">
@@ -191,14 +329,7 @@ const Dashboard = () => {
 
           {/* loading skeleton */}
           {payLoading && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {[0, 1].map((i) => (
-                <div
-                  key={i}
-                  className="db-skel h-[118px] rounded-3xl border border-[#C9A24B]/20 bg-[#0D2538]"
-                />
-              ))}
-            </div>
+            <div className="db-skel h-[300px] rounded-[28px] border border-[#C9A24B]/20 bg-[#0D2538]" />
           )}
 
           {/* error */}
@@ -215,47 +346,60 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* cards: শুধু বিকাশ ও নগদ */}
+          {/* premium card */}
           {!payLoading && !payError && paymentMethods.length > 0 && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {paymentMethods.map((item) => {
-                const k = keyOf(item);
-                return (
-                  <article
-                    key={item.id}
-                    className="rounded-3xl border-2 border-[#C9A24B]/40 bg-[#0D2538] p-4 shadow-[0_10px_40px_-20px_rgba(0,0,0,0.8)]"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white p-2 shadow-[0_6px_16px_-6px_rgba(0,0,0,0.6)]">
-                        <img
-                          src={LOGOS[k]}
-                          alt={item.method_name}
-                          className="h-full w-full object-contain"
-                        />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="truncate text-[20px] font-bold text-[#F5EBCB]">
-                          {BN_NAMES[k]}
-                        </h3>
-                        <p className="text-[14px] font-medium text-[#A9B7C2]">মোবাইল ব্যাংকিং</p>
+            <div className="mx-auto max-w-xl rounded-[28px] bg-gradient-to-br from-[#F2D98F] via-[#C9A24B] to-[#7A5A17] p-[1.5px] shadow-[0_30px_70px_-28px_rgba(0,0,0,0.95),0_0_0_1px_rgba(201,162,75,0.15)]">
+              <article
+                className="relative overflow-hidden rounded-[26.5px] p-5 sm:p-6"
+                style={PREMIUM_CARD_BG}
+              >
+                {/* সাজসজ্জার বৃত্ত */}
+                <span className="pointer-events-none absolute -right-14 -top-14 h-48 w-48 rounded-full border border-[#F2D98F]/15" />
+                <span className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full border border-[#F2D98F]/15" />
+
+                {/* top: chip + contactless */}
+                <div className="relative flex items-start justify-between">
+                  <ChipIcon />
+                  <span className="text-[#F2D98F]/80">
+                    <ContactlessIcon />
+                  </span>
+                </div>
+
+                <p className="relative mt-4 text-[14px] font-medium text-[#A9B7C2]">
+                  এজেন্ট পেমেন্ট নম্বর
+                </p>
+
+                {/* rows */}
+                <div className="relative mt-2 divide-y divide-[#C9A24B]/25">
+                  {paymentMethods.map((item) => {
+                    const k = keyOf(item);
+                    return (
+                      <div key={item.id} className="py-4 first:pt-2 last:pb-1">
+                        <div className="flex items-center gap-3.5">
+                          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white p-2 shadow-[0_6px_16px_-6px_rgba(0,0,0,0.7)]">
+                            <img
+                              src={LOGOS[k]}
+                              alt={item.method_name}
+                              className="h-full w-full object-contain"
+                            />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[16px] font-bold text-[#F5EBCB]">{BN_NAMES[k]}</p>
+                            <p className="truncate font-mono text-[23px] font-bold tracking-[0.12em] text-[#F2D98F] sm:text-[26px]">
+                              {prettyNumber(item.account_number)}
+                            </p>
+                          </div>
+                        </div>
+                        {item.description && (
+                          <p className="mt-2 whitespace-pre-line text-[15px] font-medium leading-[1.75] text-[#E6DCC0]">
+                            {item.description}
+                          </p>
+                        )}
                       </div>
-                    </div>
-
-                    <div className="mt-3.5 rounded-2xl border border-[#C9A24B]/30 bg-[#081A2B] px-4 py-3">
-                      <p className="text-[13px] font-medium text-[#A9B7C2]">নম্বর</p>
-                      <p className="truncate font-mono text-[20px] font-bold tracking-wider text-[#F2D98F]">
-                        {item.account_number || "—"}
-                      </p>
-                    </div>
-
-                    {item.description && (
-                      <p className="mt-3 whitespace-pre-line text-[15px] font-medium leading-[1.75] text-[#E6DCC0]">
-                        {item.description}
-                      </p>
-                    )}
-                  </article>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              </article>
             </div>
           )}
         </section>
