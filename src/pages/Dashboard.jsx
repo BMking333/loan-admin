@@ -23,7 +23,7 @@ const Dashboard = () => {
   const fetchPaymentMethods = async () => {
     try {
       const res = await fetch(
-        "https://loan-server-1-do86.onrender.com/paymentmethod/active"
+        "https://loan.microfinancedevelopmentprojectbangladesh.com/paymentmethod/active"
       );
       const data = await res.json();
 
