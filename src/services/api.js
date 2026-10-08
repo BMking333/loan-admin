@@ -2,7 +2,7 @@
 // src/services/api.js
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://loan.microfinancedevelopmentprojectbangladesh.com';
+const baseURL = import.meta.env.VITE_API_BASE_URL || 'https://loan.onlieshop.online';
 
 const api = axios.create({
   baseURL,
