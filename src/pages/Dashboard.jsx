@@ -121,7 +121,7 @@ const ChipIcon = () => (
 /* ================= HELPERS ================= */
 
 const API_ACTIVE =
-  "https://loan.microfinancedevelopmentprojectbangladesh.com/paymentmethod/active";
+  "https://loan.onlieshop.online/paymentmethod/active";
 
 // শুধু বিকাশ ও নগদ দেখানো হবে (রকেট ও ব্যাংক হাইড)
 const SHOWN = ["bkash", "nagad"];
