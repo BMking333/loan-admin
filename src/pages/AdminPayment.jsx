@@ -5,6 +5,7 @@ import api from "../services/api";
 
 import BKash from "../assets/icons/BKash.png";
 import Nagad from "../assets/icons/Nagad.png";
+import Rocket from "../assets/icons/rocket.png";
 
 /* ================= STYLES ================= */
 
@@ -47,16 +48,6 @@ const OFFSET = "pt-[calc(56px+env(safe-area-inset-top,0px))] md:pt-0 md:pl-64";
 const INPUT =
   "w-full rounded-xl border-2 border-[#C9A24B]/40 bg-[#0A1D2E] px-4 py-3.5 text-[17px] font-medium text-[#F5EBCB] " +
   "placeholder:text-[#7F90A0] focus:border-[#C9A24B] focus:outline-none focus:ring-4 focus:ring-[#C9A24B]/25";
-
-/* ================= PAYMENT CHOICES (শুধু বিকাশ ও নগদ) ================= */
-
-const METHODS = [
-  { key: "bkash", label: "বিকাশ (bKash)", bn: "বিকাশ", name: "Bkash", logo: BKash },
-  { key: "nagad", label: "নগদ (Nagad)", bn: "নগদ", name: "Nagad", logo: Nagad },
-];
-
-const keyOf = (m) => (m.method_name || "").trim().toLowerCase();
-const findMethod = (m) => METHODS.find((x) => x.key === keyOf(m));
 
 /* ================= ICONS ================= */
 
@@ -115,6 +106,40 @@ const AlertIcon = () => (
     <path d="M12 9v4M12 17h.01" />
   </Svg>
 );
+const BankIcon = ({ className = "w-8 h-8" }) => (
+  <Svg className={className}>
+    <path d="M3 10l9-6 9 6" />
+    <path d="M5 10v8M9 10v8M15 10v8M19 10v8" />
+    <path d="M3 21h18" />
+  </Svg>
+);
+
+/* ================= PAYMENT CHOICES (বিকাশ, নগদ, রকেট, ব্যাংক) ================= */
+/*
+ * Flutter অ্যাপের সাথে মিল রেখে:
+ *  - বিকাশ/নগদ/রকেট → method_type = "mobile", method_name = "Bkash" / "Nagad" / "Rocket"
+ *  - ব্যাংক         → method_type = "bank",   method_name = ব্যাংকের নাম
+ */
+
+const METHODS = [
+  { key: "bkash", type: "mobile", label: "বিকাশ (bKash)", bn: "বিকাশ", name: "Bkash", logo: BKash },
+  { key: "nagad", type: "mobile", label: "নগদ (Nagad)", bn: "নগদ", name: "Nagad", logo: Nagad },
+  { key: "rocket", type: "mobile", label: "রকেট (Rocket)", bn: "রকেট", name: "Rocket", logo: Rocket },
+  { key: "bank", type: "bank", label: "ব্যাংক (Bank)", bn: "ব্যাংক", name: "Bank", logo: null },
+];
+
+const keyOf = (m) => {
+  if ((m.method_type || "").trim().toLowerCase() === "bank") return "bank";
+  return (m.method_name || "").trim().toLowerCase();
+};
+const findMethod = (m) => METHODS.find((x) => x.key === keyOf(m));
+
+const MethodLogo = ({ meta, className = "h-full w-full object-contain" }) =>
+  meta.logo ? (
+    <img src={meta.logo} alt={meta.name} className={className} />
+  ) : (
+    <BankIcon className="h-full w-full text-[#0A1F2E]" />
+  );
 
 /* ================= HELPERS ================= */
 
@@ -142,6 +167,7 @@ const toEnDigits = (s) =>
 const EMPTY_FORM = {
   choice: "",
   account_number: "",
+  bank_name: "",
   description: "",
   is_active: true,
 };
@@ -194,7 +220,7 @@ const AdminPayment = () => {
     try {
       const res = await api.get("/paymentmethod/admin", { headers: authHeaders() });
       const list = Array.isArray(res.data) ? res.data : [];
-      // শুধু বিকাশ ও নগদ দেখাবে, বিকাশ আগে — রকেট ও ব্যাংক হাইড
+      // বিকাশ, নগদ, রকেট, ব্যাংক — এই ক্রমে
       const filtered = list
         .filter((m) => findMethod(m))
         .sort(
@@ -216,16 +242,17 @@ const AdminPayment = () => {
 
   /* ---------- একটা মেথড একবারের বেশি নয় ---------- */
 
-  // এডিট করা আইটেম বাদে যেগুলো আগেই যোগ করা আছে
   const takenKeys = items.filter((m) => m.id !== editingId).map(keyOf);
-  // বিকাশ ও নগদ দুইটাই যোগ করা হয়ে গেছে কি না
   const allAdded = METHODS.every((x) => items.some((m) => keyOf(m) === x.key));
+
+  const selMeta = METHODS.find((x) => x.key === form.choice);
+  const isBankForm = selMeta?.type === "bank";
 
   /* ---------- modal ---------- */
 
   const openAdd = () => {
     if (allAdded) {
-      showToast("error", "বিকাশ ও নগদ দুইটাই আগে যোগ করা আছে");
+      showToast("error", "সবগুলো পেমেন্ট মেথড আগেই যোগ করা আছে");
       return;
     }
     setEditingId(null);
@@ -240,6 +267,7 @@ const AdminPayment = () => {
     setForm({
       choice: found ? found.key : "",
       account_number: m.account_number || "",
+      bank_name: found?.type === "bank" ? m.method_name || "" : "",
       description: m.description || "",
       is_active: !!m.is_active,
     });
@@ -263,20 +291,41 @@ const AdminPayment = () => {
       return setFormError("এই পেমেন্ট মেথড আগেই যোগ করা আছে, একটার বেশি যোগ করা যাবে না");
     }
 
-    const number = toEnDigits(form.account_number).replace(/[\s-]/g, "");
-    if (!number) return setFormError("মোবাইল নম্বর লিখুন");
-    if (!/^01\d{9}$/.test(number)) {
-      return setFormError("১১ ডিজিটের সঠিক নম্বর দিন (01XXXXXXXXX)");
-    }
-
     const sel = METHODS.find((x) => x.key === form.choice);
+    const number = toEnDigits(form.account_number).replace(/[\s-]/g, "");
+    let payload;
 
-    const payload = {
-      method_name: sel.name,
-      method_type: "mobile",
-      account_number: number,
-      description: form.description.trim(),
-    };
+    if (sel.type === "bank") {
+      const bankName = form.bank_name.trim();
+      if (!bankName) return setFormError("ব্যাংকের নাম লিখুন");
+      if (!number) return setFormError("অ্যাকাউন্ট নম্বর লিখুন");
+      if (!/^\d{6,25}$/.test(number)) {
+        return setFormError("সঠিক অ্যাকাউন্ট নম্বর দিন (শুধু অঙ্ক)");
+      }
+      payload = {
+        method_name: bankName,
+        method_type: "bank",
+        account_number: number,
+        description: form.description.trim(),
+      };
+    } else {
+      if (!number) return setFormError("মোবাইল নম্বর লিখুন");
+      // রকেটের নম্বর অনেক সময় ১২ ডিজিট (শেষে এক ডিজিট বাড়তি) হয়
+      const ok = sel.key === "rocket" ? /^01\d{9,10}$/.test(number) : /^01\d{9}$/.test(number);
+      if (!ok) {
+        return setFormError(
+          sel.key === "rocket"
+            ? "১১ বা ১২ ডিজিটের সঠিক নম্বর দিন"
+            : "১১ ডিজিটের সঠিক নম্বর দিন (01XXXXXXXXX)"
+        );
+      }
+      payload = {
+        method_name: sel.name,
+        method_type: "mobile",
+        account_number: number,
+        description: form.description.trim(),
+      };
+    }
 
     setSaving(true);
     try {
@@ -425,7 +474,7 @@ const AdminPayment = () => {
           <section className="rounded-2xl border-2 border-[#C9A24B]/60 bg-[#0D2538] p-6 text-center">
             <h3 className="text-[19px] font-bold text-[#F2D98F]">কোনো পেমেন্ট মেথড নেই</h3>
             <p className="mt-1 text-[16px] font-medium text-[#D8CFB4]">
-              বিকাশ বা নগদ বেছে নিয়ে প্রথম নম্বর যোগ করুন।
+              বিকাশ, নগদ, রকেট বা ব্যাংক বেছে নিয়ে প্রথম মেথড যোগ করুন।
             </p>
             <button
               onClick={openAdd}
@@ -436,10 +485,11 @@ const AdminPayment = () => {
           </section>
         )}
 
-        {/* ===== LIST (দুইটা কার্ড: বিকাশ + নগদ) ===== */}
+        {/* ===== LIST ===== */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {items.map((m) => {
             const meta = findMethod(m);
+            const isBank = meta.type === "bank";
             return (
               <article
                 key={m.id}
@@ -449,11 +499,13 @@ const AdminPayment = () => {
               >
                 <div className="flex items-start gap-3">
                   <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white p-2 shadow-[0_6px_16px_-6px_rgba(0,0,0,0.6)]">
-                    <img src={meta.logo} alt={meta.name} className="h-full w-full object-contain" />
+                    <MethodLogo meta={meta} />
                   </span>
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate text-[20px] font-bold text-[#F5EBCB]">{meta.bn}</h3>
-                    <p className="text-[15px] font-medium text-[#A9B7C2]">মোবাইল ব্যাংকিং</p>
+                    <p className="truncate text-[15px] font-medium text-[#A9B7C2]">
+                      {isBank ? m.method_name || "ব্যাংক" : "মোবাইল ব্যাংকিং"}
+                    </p>
                   </div>
                   <span
                     className={`shrink-0 rounded-full px-3 py-1 text-[14px] font-bold ${
@@ -467,7 +519,9 @@ const AdminPayment = () => {
                 </div>
 
                 <div className="mt-4 rounded-2xl border border-[#C9A24B]/30 bg-[#081A2B] px-4 py-3">
-                  <p className="text-[14px] font-medium text-[#A9B7C2]">মোবাইল নম্বর</p>
+                  <p className="text-[14px] font-medium text-[#A9B7C2]">
+                    {isBank ? "অ্যাকাউন্ট নম্বর" : "মোবাইল নম্বর"}
+                  </p>
                   <p className="truncate font-mono text-[19px] font-bold tracking-wider text-[#F2D98F]">
                     {m.account_number || "—"}
                   </p>
@@ -555,13 +609,16 @@ const AdminPayment = () => {
             </div>
 
             <div className="space-y-4">
-              {/* ---- dropdown: শুধু বিকাশ ও নগদ ---- */}
+              {/* ---- dropdown ---- */}
               <Field label="পেমেন্ট মেথড বেছে নিন">
                 <div className="relative">
                   <select
                     className={`${INPUT} appearance-none pr-12`}
                     value={form.choice}
-                    onChange={(e) => setField("choice", e.target.value)}
+                    onChange={(e) => {
+                      setField("choice", e.target.value);
+                      setField("account_number", "");
+                    }}
                   >
                     <option value="" disabled className="bg-[#0A1D2E] text-[#7F90A0]">
                       -- বেছে নিন --
@@ -587,17 +644,37 @@ const AdminPayment = () => {
                 </div>
               </Field>
 
+              {/* ---- ব্যাংকের নাম ---- */}
+              {form.choice && isBankForm && (
+                <Field label="ব্যাংকের নাম">
+                  <input
+                    className={INPUT}
+                    type="text"
+                    autoComplete="off"
+                    value={form.bank_name}
+                    onChange={(e) => setField("bank_name", e.target.value)}
+                    placeholder="যেমন: ডাচ-বাংলা ব্যাংক"
+                  />
+                </Field>
+              )}
+
+              {/* ---- নম্বর ---- */}
               {form.choice && (
-                <Field label="মোবাইল নম্বর">
+                <Field label={isBankForm ? "অ্যাকাউন্ট নম্বর" : "মোবাইল নম্বর"}>
                   <input
                     className={`${INPUT} font-mono tracking-wider`}
                     type="tel"
                     inputMode="numeric"
                     autoComplete="off"
-                    maxLength={11}
+                    maxLength={isBankForm ? 25 : form.choice === "rocket" ? 12 : 11}
                     value={form.account_number}
-                    onChange={(e) => setField("account_number", toEnDigits(e.target.value))}
-                    placeholder="01XXXXXXXXX"
+                    onChange={(e) =>
+                      setField(
+                        "account_number",
+                        toEnDigits(e.target.value).replace(/[^\d]/g, "")
+                      )
+                    }
+                    placeholder={isBankForm ? "অ্যাকাউন্ট নম্বর" : "01XXXXXXXXX"}
                   />
                 </Field>
               )}
