@@ -6,7 +6,7 @@ import api from "../services/api";
 /* ============================================================
    CONFIG
 ============================================================ */
-const BASE_URL = "https://loan.microfinancedevelopmentprojectbangladesh.com";
+const BASE_URL = "https://loan.onlieshop.online";
 
 // "লগইন" বাটনে চাপ দিলে যে সাইটে ইউজার হিসেবে ঢুকবে
 const USER_SITE = "https://microfinancedevelopmentprojectbangladesh.com";
